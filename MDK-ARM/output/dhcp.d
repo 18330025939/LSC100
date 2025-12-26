@@ -1,0 +1,16 @@
+.\output\dhcp.o: ..\NET\LwIP\core\ipv4\dhcp.c
+.\output\dhcp.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\dhcp.o: ..\NET\arch\lwipopts.h
+.\output\dhcp.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\dhcp.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\dhcp.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\dhcp.o: ..\NET\arch\cc.h
+.\output\dhcp.o: ..\NET\arch\cpu.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\dhcp.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\dhcp.o: ..\NET\LwIP\include\lwip/opt.h

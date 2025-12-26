@@ -1,0 +1,16 @@
+.\output\dns.o: ..\NET\LwIP\core\dns.c
+.\output\dns.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\dns.o: ..\NET\arch\lwipopts.h
+.\output\dns.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\dns.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\dns.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\dns.o: ..\NET\arch\cc.h
+.\output\dns.o: ..\NET\arch\cpu.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\dns.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\dns.o: ..\NET\LwIP\include\lwip/opt.h

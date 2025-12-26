@@ -1,0 +1,16 @@
+.\output\stats.o: ..\NET\LwIP\core\stats.c
+.\output\stats.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\stats.o: ..\NET\arch\lwipopts.h
+.\output\stats.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\stats.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\stats.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\stats.o: ..\NET\arch\cc.h
+.\output\stats.o: ..\NET\arch\cpu.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\stats.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\stats.o: ..\NET\LwIP\include\lwip/opt.h

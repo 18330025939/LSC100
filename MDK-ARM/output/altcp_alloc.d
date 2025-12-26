@@ -1,0 +1,16 @@
+.\output\altcp_alloc.o: ..\NET\LwIP\core\altcp_alloc.c
+.\output\altcp_alloc.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\altcp_alloc.o: ..\NET\arch\lwipopts.h
+.\output\altcp_alloc.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\altcp_alloc.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\altcp_alloc.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\altcp_alloc.o: ..\NET\arch\cc.h
+.\output\altcp_alloc.o: ..\NET\arch\cpu.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\altcp_alloc.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\altcp_alloc.o: ..\NET\LwIP\include\lwip/opt.h

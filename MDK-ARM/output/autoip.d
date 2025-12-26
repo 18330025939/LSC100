@@ -1,0 +1,16 @@
+.\output\autoip.o: ..\NET\LwIP\core\ipv4\autoip.c
+.\output\autoip.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\autoip.o: ..\NET\arch\lwipopts.h
+.\output\autoip.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\autoip.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\autoip.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\autoip.o: ..\NET\arch\cc.h
+.\output\autoip.o: ..\NET\arch\cpu.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\autoip.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\autoip.o: ..\NET\LwIP\include\lwip/opt.h

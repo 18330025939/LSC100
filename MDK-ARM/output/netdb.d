@@ -1,0 +1,17 @@
+.\output\netdb.o: ..\NET\LwIP\api\netdb.c
+.\output\netdb.o: ..\NET\LwIP\include\lwip/netdb.h
+.\output\netdb.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\netdb.o: ..\NET\arch\lwipopts.h
+.\output\netdb.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\netdb.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\netdb.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\netdb.o: ..\NET\arch\cc.h
+.\output\netdb.o: ..\NET\arch\cpu.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\netdb.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\netdb.o: ..\NET\LwIP\include\lwip/opt.h

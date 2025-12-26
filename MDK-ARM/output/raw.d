@@ -1,0 +1,16 @@
+.\output\raw.o: ..\NET\LwIP\core\raw.c
+.\output\raw.o: ..\NET\LwIP\include\lwip/opt.h
+.\output\raw.o: ..\NET\arch\lwipopts.h
+.\output\raw.o: ..\FreeRTOS\FreeRTOSConfig.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdint.h
+.\output\raw.o: ..\NET\LwIP\include\lwip/debug.h
+.\output\raw.o: ..\NET\LwIP\include\lwip/arch.h
+.\output\raw.o: ..\NET\arch\cc.h
+.\output\raw.o: ..\NET\arch\cpu.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdio.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stdlib.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\stddef.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\inttypes.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\limits.h
+.\output\raw.o: D:\IDE\MDK5\install\Core\ARM\ARMCC\Bin\..\include\ctype.h
+.\output\raw.o: ..\NET\LwIP\include\lwip/opt.h
