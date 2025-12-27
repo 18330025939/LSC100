@@ -166,6 +166,7 @@ typedef struct
     uint8_t ucRsvd[3];
 } AlarmDataReq_t;
 
+#if 0
 typedef struct
 {
     uint16_t usTotalPack;
@@ -182,7 +183,17 @@ typedef struct
     FloatUInt32_t uRearV;
     uint8_t usRsvd[15];
 } AlarmDataRes_t;
-
+#else 
+typedef struct
+{
+    uint16_t usTotalPack;
+    uint16_t usCurrSequ;
+    SystemTime_t stTime;
+    uint64_t ullTs;
+    SampleData_t data[50];
+    uint8_t usRsvd[7];
+} AlarmDataRes_t;
+#endif
 typedef struct
 {
     SystemTime_t stStrTime;
@@ -249,10 +260,10 @@ typedef struct
 
 
 #define MSGPROC_TASK_PRIO     (configMAX_PRIORITIES - 2)
-#define MSGPROC_STACK_SIZE    512
+#define MSGPROC_STACK_SIZE    1024
 
 #define MSGSEND_TASK_PRIO     (configMAX_PRIORITIES - 3)
-#define MSGSEND_STACK_SIZE    512
+#define MSGSEND_STACK_SIZE    1024
 
 typedef struct
 {

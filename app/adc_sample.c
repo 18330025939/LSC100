@@ -27,7 +27,7 @@ TaskHandle_t SampleTask_Handle;
 TaskHandle_t TimeSyncTask_Handle;
 
 static void Adc_Save_Alarm(void);
-static void Adc_Clear_Alarm(void);
+static void Adc_Clear_Alarm(uint16_t raw_data);
 
 /**
  * @brief  初始化ADC环形缓存
@@ -307,7 +307,6 @@ void time_sync_task(void *pvParameters)
     while(1) {
         #if 1
         if(xSemaphoreTake(g_TimeSync.mutex, pdMS_TO_TICKS(10)) == pdPASS) {
-            // tick = g_sample_tick;
             #if 1
             sd2505_get_time(&time);
             g_TimeSync.sys_time.ucYear = time.ucYear;
@@ -330,9 +329,9 @@ void time_sync_task(void *pvParameters)
             // }
             
             #if 0
-            g_TimeSync.ms_offset = tick % 1000; // 2. 计算同步时刻的毫秒偏移（tick取模1000）
-            g_TimeSync.tick_base = tick; // 3. 记录同步时的采样计数值
-            g_TimeSync.sync_valid = 1; // 4. 标记同步有效
+            g_TimeSync.ms_offset = g_sample_tick % 1000; // 2. 计算同步时刻的毫秒偏移（tick取模1000）
+            g_TimeSync.tick_base = g_sample_tick; // 3. 记录同步时的采样计数值
+            // g_TimeSync.sync_valid = 1; // 4. 标记同步有效
             #endif
             xSemaphoreGive(g_TimeSync.mutex);
         }
@@ -458,8 +457,15 @@ static void Adc_Check_Alarm(AdcItem_t *item)
  * @param       无
  * @retval      无
  */
-static void Adc_Clear_Alarm(void)
+static void Adc_Clear_Alarm(uint16_t raw_data)
 {
+    float adc = 0.0f;
+
+    adc = ((float)raw_data / 65536.0f) * 10.0f;
+    if (0 == IS_CLEANR_ALARM(adc)) {
+        return ;
+    }
+
     if (xSemaphoreTake(g_AlarmNotify.mutex, pdMS_TO_TICKS(10)) != pdPASS) {
         return ; 
     }   
@@ -514,11 +520,8 @@ void sample_task(void *pvParameters)
     uint32_t notify_value = 0;
     AdcItem_t item;
     uint8_t i = 0;
-    // uint64_t ts = 0;
     float sensor_data = 0.0f;
-    // uint64_t tick = 0;
     uint16_t raw_adc[4] = {0};
-    float adc = 0.0f;
 
     timer0_start();
     
@@ -529,15 +532,13 @@ void sample_task(void *pvParameters)
         {
             // taskENTER_CRITICAL();// 关调度器，保证时序不被打断
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i++) {
-                // item.raw_data[i] = cm2248_start_read_data();
-                cm2248_read_both_channels(&item.raw_data[i], &raw_adc[i]);
+                item.raw_data[i] = cm2248_start_read_data();
+                // cm2248_read_both_channels(&item.raw_data[i], &raw_adc[i]);
             }
             cm2248_start_conv();
             // taskEXIT_CRITICAL(); // 开调度器
+            item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i ++) {
-                if (i == 0) {
-                    adc = ((float)raw_adc[i] / 65536.0f) * 10.0f;
-                }
                 sensor_data = ((float)item.raw_data[i] / 65536.0f) * 10.0f;//65535.0f) * (2.0f * 10.0f) - 10.0f;// 32768.0f) * 10.0f;
                 if (i % 2 == 0) {
                     item.data[i].f = CONVERT_SENSOR_TO_BUS_CURRENT(sensor_data);
@@ -549,12 +550,14 @@ void sample_task(void *pvParameters)
                 item.data[SNESOR_REAR_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SNESOR_REAR_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD) {
                 continue;
             }
-            item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
+            // APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f);
+            // if (item.data[SENSOR_FRONT_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SENSOR_FRONT_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD &&
+            //     item.data[SNESOR_REAR_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SNESOR_REAR_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD) {
+            //     continue;
+            // }
 
-            if (IS_CLEANR_ALARM(adc)) {
-                Adc_Clear_Alarm();
-            }
             Adc_Cache_Write_One((AdcItemCache_t *)&g_AdcItemCache, (AdcItem_t *)&item);
+            Adc_Clear_Alarm(raw_adc[0]);
             Adc_Check_Alarm(&item);
         }
     }
@@ -565,6 +568,8 @@ void adc_sample_start(void)
     Alarm_Notify_Init(&g_AlarmNotify);
 
     Adc_Cache_Init(&g_AdcItemCache);
+
+    APP_PRINTF("AdcItem_t size:%d, SystemTime_t size:%d\r\n", sizeof(AdcItem_t), sizeof(SystemTime_t));
     
     xTaskCreate((TaskFunction_t)time_sync_task,             // 任务函数
                 (const char*   )"time_sync_task",           // 任务名称

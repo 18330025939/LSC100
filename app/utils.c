@@ -70,7 +70,7 @@ static uint8_t isQueueEmpty(ThreadSafeCirQue *q)
  * @retval      TRUE  : 入队成功
                 FALSE : 入队失败
  */
-uint8_t enQueue(ThreadSafeCirQue *q, uint8_t *buf, uint8_t len)
+uint8_t enQueue(ThreadSafeCirQue *q, uint8_t *buf, uint16_t len)
 {
     xSemaphoreTake(q->mutex, portMAX_DELAY);
     if (TRUE == isQueueFull(q))

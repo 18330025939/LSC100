@@ -15,7 +15,7 @@
 #define EMMC_BLOCK_NUM           60620800                              // 总块数
 
 #define ADC_INDEX_START_ADDR     0x7270E0000ULL //0x730000000ULL 
-#define ADC_ITEM_SIZE            sizeof(AdcItem_t)                               // 单条日志字节数
+#define ADC_ITEM_SIZE            64                               // 单条日志字节数
 #define ADC_ITEM_NUM_PER_BLOCK   (EMMC_BLOCK_SIZE / ADC_ITEM_SIZE)               // 每块可存日志数：8条
 #define ADC_ITEM_NUM_PER_SECOND  1000                                            // 每秒日志条数
 #define ADC_ITEM_BLOCK_NUM       (ADC_ITEM_NUM_PER_SECOND / ADC_ITEM_NUM_PER_BLOCK)        // 每秒数据缓存块数：（1000/8=125）块

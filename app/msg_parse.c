@@ -21,7 +21,8 @@ TcpServerHandle_t g_TcpServerHandle = {0};
 
 TaskHandle_t MsgProc_Task_Handle;
 TaskHandle_t MsgSend_Task_Handle;
-static uint8_t g_buf[25 * ADC_ITEM_NUM_PER_BLOCK * ADC_ITEM_SIZE] = {0};
+static uint8_t g_buf[200 * ADC_ITEM_SIZE] = {0};
+static uint8_t g_send[900] = {0};
 volatile uint8_t g_config_status = 0;
 
 static void kt_ConfigInfo(void *arg);
@@ -250,7 +251,7 @@ static void kt_AlarmInfo(void *arg)
  */
 static void kt_AlarmData(void *arg)
 {
-    uint8_t buf[MAX_QUEUE_DATA_SIZE] = {0};
+    // uint8_t buf[MAX_QUEUE_DATA_SIZE] = {0};
     MsgFramHdr_t *pstMsgHdr =NULL;
     MsgFramCrc_t *pstMsgCrc = NULL;
     AlarmDataReq_t *pstAlarmReq = NULL;
@@ -261,6 +262,7 @@ static void kt_AlarmData(void *arg)
     uint16_t len = 0;
     int8_t ret = -1;
     uint32_t off = 0;
+    uint16_t curr_index = 0;
     
     if (arg == NULL) {
         return;
@@ -274,16 +276,18 @@ static void kt_AlarmData(void *arg)
                                bcd_to_dec(pstSysTime->ucMin), bcd_to_dec(pstSysTime->ucScd));
     
     APP_PRINTF("kt_AlarmData, ts:%lu\r\n", ts);
-    pstMsgHdr = (MsgFramHdr_t *)buf;
+    memset(g_send, 0, sizeof(g_send));
+    pstMsgHdr = (MsgFramHdr_t *)g_send;
     pstMsgHdr->usHdr = MSG_DATA_FRAM_HDR;
     len = sizeof(MsgFramHdr_t) + sizeof(AlarmDataRes_t) + sizeof(MsgFramCrc_t);
     pstMsgHdr->usLen = HConvert(&len);
     pstMsgHdr->ucSign = MSG_SIGN_ALARM_DATA_RES;
-    pstAlarmRes = (AlarmDataRes_t *)(buf + sizeof(MsgFramHdr_t));
-    pstMsgCrc = (MsgFramCrc_t*)(buf + sizeof(MsgFramHdr_t) + sizeof(AlarmDataRes_t)); 
-    pstAlarmRes->usTotalPack = ADC_ITEM_NUM_PER_SECOND * 3;
+    pstAlarmRes = (AlarmDataRes_t *)(g_send + sizeof(MsgFramHdr_t));
+    pstMsgCrc = (MsgFramCrc_t*)(g_send + sizeof(MsgFramHdr_t) + sizeof(AlarmDataRes_t)); 
+    pstAlarmRes->usTotalPack = ADC_ITEM_NUM_PER_SECOND * 3 / 50;
     pstAlarmRes->usTotalPack = HConvert(&pstAlarmRes->usTotalPack);
 
+#if 0
     for (uint8_t index = 0; index < 15; index ++) {
         ret = Storage_Read_AlarmInfo(&g_AlarmObject, ts, off, g_buf, sizeof(g_buf));
         if (ret == 0) {
@@ -311,6 +315,31 @@ static void kt_AlarmData(void *arg)
             off += sizeof(g_buf);
         }
     }
+#else
+    for (uint8_t i = 0; i < 15; i ++) {
+        ret = Storage_Read_AlarmInfo(&g_AlarmObject, ts, off, g_buf, sizeof(g_buf));
+        if (ret == 0) {
+            for (uint8_t num = 0 ; num < (200 / 50); i++) {
+                pstAlarmRes->usCurrSequ = HConvert(&curr_index);
+                item = (AdcItem_t *)(g_buf + num * 50 * ADC_ITEM_SIZE);
+                memcpy(&pstAlarmRes->stTime, &item->time, sizeof(SystemTime_t));
+                pstAlarmRes->ullTs = QW_HConvert(&item->ts);
+                for (uint8_t index = 0; index < 50; index ++) {
+                    item = (AdcItem_t *)(g_buf + (index + num * 50) * ADC_ITEM_SIZE);
+                    pstAlarmRes->data[index].f_cur.u = DW_HConvert(&item->data[0].u);
+                    pstAlarmRes->data[index].f_vlt.u = DW_HConvert(&item->data[1].u);
+                    pstAlarmRes->data[index].r_cur.u = DW_HConvert(&item->data[2].u);
+                    pstAlarmRes->data[index].r_vlt.u = DW_HConvert(&item->data[3].u);  
+                }
+                pstMsgCrc->usCrc = checkSum_8(g_send, len - sizeof(MsgFramCrc_t));
+                pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
+                tcp_server_send_data(&g_TcpServerHandle, g_send, len);
+                curr_index += 1;
+            }
+        }
+        off += sizeof(g_buf);
+    }
+#endif
 }
 
 /**
@@ -369,13 +398,14 @@ static void kt_SampleInfo(void *arg)
  */
 static void kt_SampleData(void *arg)
 {
-    uint8_t buf[MAX_QUEUE_DATA_SIZE] = {0};
+    // uint8_t buf[MAX_QUEUE_DATA_SIZE] = {0};
     MsgFramHdr_t *pstMsgHdr =NULL;
     MsgFramCrc_t *pstMsgCrc = NULL;
     SampleDataReq_t *pstSamReq = NULL;
     SystemTime_t *pstSysTime = NULL;
     SampleDataRes_t *pstSampleRes = NULL;
     AdcItem_t *item = NULL;
+    SampleData_t *pstData = NULL;
     uint32_t str_ts = 0;
     uint32_t end_ts = 0;
     uint16_t len = 0;
@@ -399,16 +429,19 @@ static void kt_SampleData(void *arg)
                                    bcd_to_dec(pstSysTime->ucMin), bcd_to_dec(pstSysTime->ucScd));
 
     APP_PRINTF("kt_SampleData, str_ts:%d, end_ts:%d\r\n", str_ts, end_ts);
-    
-    pstMsgHdr = (MsgFramHdr_t *)buf;
+    memset(g_send, 0, sizeof(g_send));
+    pstMsgHdr = (MsgFramHdr_t *)g_send;
     pstMsgHdr->usHdr = MSG_DATA_FRAM_HDR;
     len = sizeof(MsgFramHdr_t) + sizeof(SampleDataRes_t) + sizeof(MsgFramCrc_t);
     pstMsgHdr->usLen = HConvert(&len);
     pstMsgHdr->ucSign = MSG_SIGN_SAMPLE_DATA_RES;
-    pstSampleRes = (SampleDataRes_t *)(buf + sizeof(MsgFramHdr_t));
-    pstSampleRes->ulTotalPack = (end_ts - str_ts) * ADC_ITEM_NUM_PER_SECOND;
+    pstSampleRes = (SampleDataRes_t *)(g_send + sizeof(MsgFramHdr_t));
+    if (end_ts <= str_ts) {
+        return ;
+    }
+    pstSampleRes->ulTotalPack = (end_ts - str_ts) * ADC_ITEM_NUM_PER_SECOND / 50;
     pstSampleRes->ulTotalPack = DW_HConvert(&pstSampleRes->ulTotalPack);
-    pstMsgCrc = (MsgFramCrc_t *)(buf + sizeof(MsgFramHdr_t) + sizeof(SampleDataRes_t));
+    pstMsgCrc = (MsgFramCrc_t *)(g_send + sizeof(MsgFramHdr_t) + sizeof(SampleDataRes_t));
     #if 0
     do {
         for (uint8_t i = 0; i < (ADC_ITEM_BLOCK_NUM / 25); i++) {
@@ -439,29 +472,34 @@ static void kt_SampleData(void *arg)
         str_ts += 1;
     } while (str_ts < end_ts);
     #else
-    for (; str_ts < end_ts; str_ts ++) {
+    for (; str_ts < end_ts; str_ts++) {
         for (uint8_t i = 0; i < (ADC_ITEM_BLOCK_NUM / 25); i++) {
+            // memset(g_buf, 0, sizeof(g_buf));
             ret = Storage_Read_AdcData(&g_AdcObject, str_ts, off, g_buf, 25);//ADC_ITEM_BLOCK_NUM);
             if (ret == 0) {
-                for (uint8_t num = 0; num < ((25 * ADC_ITEM_NUM_PER_BLOCK) / 50); num++) {
+                for (uint16_t num = 0; num < ((25 * ADC_ITEM_NUM_PER_BLOCK) / 50); num++) {
                     pstSampleRes->ulCurrSequ = DW_HConvert(&curr_index);
-                    item = (AdcItem_t *)g_buf;
+                    item = (AdcItem_t *)(g_buf + num * 50 * ADC_ITEM_SIZE);
                     memcpy(&pstSampleRes->stTime, &item->time, sizeof(SystemTime_t));
                     pstSampleRes->ullTs = QW_HConvert(&item->ts);
-                    for (uint8_t index = 0; index < 50; index ++) {
-                        item = (AdcItem_t *)(g_buf + (index + num * 50 * sizeof(AdcItem_t)));
-                        pstSampleRes->data[i].f_cur.u = DW_HConvert(&item->data[0].u);
-                        pstSampleRes->data[i].f_vlt.u = DW_HConvert(&item->data[1].u);
-                        pstSampleRes->data[i].r_cur.u = DW_HConvert(&item->data[2].u);
-                        pstSampleRes->data[i].r_vlt.u = DW_HConvert(&item->data[3].u);
+                    for (uint16_t index = 0; index < 50; index ++) {
+                        item = (AdcItem_t *)(g_buf + (index + num * 50) * ADC_ITEM_SIZE);
+                        pstData = (SampleData_t *)&pstSampleRes->data[index];
+                        pstData->f_cur.u = DW_HConvert(&item->data[0].u);
+                        pstData->f_vlt.u = DW_HConvert(&item->data[1].u);
+                        pstData->r_cur.u = DW_HConvert(&item->data[2].u);
+                        pstData->r_vlt.u = DW_HConvert(&item->data[3].u);
                     }  
-                    pstMsgCrc->usCrc = checkSum_8(buf, len - sizeof(MsgFramCrc_t));
+                    pstMsgCrc->usCrc = checkSum_8(g_send, len - sizeof(MsgFramCrc_t));
                     pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
-                    tcp_server_send_data(&g_TcpServerHandle, buf, len);
+                    tcp_server_send_data(&g_TcpServerHandle, g_send, len);
+                    // enQueue(&g_CirQue, g_send, MAX_QUEUE_DATA_SIZE);
                     curr_index += 1; 
                 }
+                off += 25;
+            } else {
+                break;
             }
-            off += 25;
         }
         off = 0;
     }

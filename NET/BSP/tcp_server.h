@@ -6,7 +6,7 @@
 
 // TCP Server配置参数（可根据实际需求修改）
 #define TCP_SERVER_PORT       8080    // 监听端口
-#define TCP_SERVER_BACKLOG    3       // 最大等待连接数
+#define TCP_SERVER_BACKLOG    1       // 最大等待连接数
 #define TCP_RECV_BUF_LEN      128     // 接收缓冲区长度
 #define TCP_SEND_BUF_LEN      128     // 发送缓冲区长度
 #define TCP_SERVER_TASK_STACK 1024    // 任务栈大小

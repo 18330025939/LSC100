@@ -75,7 +75,7 @@ uint16_t cm2248_start_read_data(void)
         CM2248_CLK_H;
         if(CM2248_ADC_DOUTA)
         {
-            usdata |= (1U << i);
+            usdata |= (1 << i);
         }
         CM2248_CLK_L;
     }
@@ -103,11 +103,11 @@ void cm2248_read_both_channels(uint16_t *data_a, uint16_t *data_b)
         CM2248_CLK_H;
         if(CM2248_ADC_DOUTA)
         {
-            usdata_a |= (1U << i);
+            usdata_a |= (1 << i);
         }
         if(CM2248_ADC_DOUTB)
         {
-            usdata_b |= (1U << i);
+            usdata_b |= (1 << i);
         }
         CM2248_CLK_L;
     }

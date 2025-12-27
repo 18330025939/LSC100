@@ -13,7 +13,7 @@
 #define TRUE 1
 #endif
 
-#define MAX_QUEUE_SIZE  100
+#define MAX_QUEUE_SIZE  20
 #define MAX_QUEUE_DATA_SIZE  128
 typedef struct
 {
@@ -46,7 +46,7 @@ typedef union
 } FloatUInt32_t;
 
 uint8_t initCirQueue(ThreadSafeCirQue *que);
-uint8_t enQueue(ThreadSafeCirQue *q, uint8_t *buf, uint8_t len);
+uint8_t enQueue(ThreadSafeCirQue *q, uint8_t *buf, uint16_t len);
 uint8_t deQueue(ThreadSafeCirQue *q, uint8_t *buf);
 
 uint32_t datetime_to_timestamp(uint16_t year, uint8_t month, uint8_t day, 

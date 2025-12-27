@@ -182,12 +182,12 @@ void socket_close(socket_handle_t *handle)
     if (handle == NULL) {
         return;
     }
-    // 关闭Socket FD
+
     if (handle->sock_fd >= 0) {
         closesocket(handle->sock_fd);
         handle->sock_fd = -1;
     }
-    // 重置句柄状态
+    
     handle->stat = SOCK_STAT_CLOSED;
     memset(&handle->local_addr, 0, sizeof(struct sockaddr_in));
     memset(&handle->peer_addr, 0, sizeof(struct sockaddr_in));

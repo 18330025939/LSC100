@@ -14,7 +14,7 @@
 
 AdcObject_t g_AdcObject = {0};
 AlarmObject_t g_AlarmObject = {0};
-// uint8_t g_buf[EMMC_BLOCK_SIZE] = {0};
+// static uint8_t g_buf[EMMC_BLOCK_SIZE * 125] = {0};
 TaskHandle_t StorageTask_Handle; 
 TaskHandle_t AlarmTask_Handle; 
 static uint8_t g_adc_items[(ADC_ITEM_NUM_PER_SECOND + 100) * ADC_ITEM_SIZE] = {0};
@@ -49,7 +49,6 @@ int8_t Storage_Write_AdcData(AdcObject_t *adc, uint32_t timestamp, uint8_t *data
     }
     uint32_t addr = adc->addr;
     emmcerasewriteblocks(data, addr, block_num);
-
     adc->addr = addr + block_num;
     if (adc->addr >= (ADC_INDEX_START_ADDR / EMMC_BLOCK_SIZE)) {
         adc->addr = 0;
@@ -86,7 +85,7 @@ int8_t Storage_Write_AdcData(AdcObject_t *adc, uint32_t timestamp, uint8_t *data
             g_ConfigInfo.str_time = adc->str_time;
             g_ConfigInfo.end_time = adc->end_time;
             g_config_status = 1;
-            APP_PRINTF("Storage_Write_AdcData, s_ts:%d, e_ts:%d\r\n", g_ConfigInfo.str_time, g_ConfigInfo.end_time);
+            APP_PRINTF("Storage_Write_AdcData, s_ts:%d, e_ts:%d\r\n", adc->str_time, adc->end_time);
         }
     }
 
@@ -380,7 +379,7 @@ uint8_t Adc_Object_Init(AdcObject_t *object)
     if (g_ConfigInfo.flag == DEV_FLAG_FIRST_ON) {
         object->index_addr = ADC_INDEX_START_BLOCK;
         object->addr = 0;
-    } else {
+    } else if (g_ConfigInfo.flag == DEV_FLAG_NEXT_ON){
         object->block_num = g_ConfigInfo.block_num;
         object->curr_block = g_ConfigInfo.curr_block;
         object->addr = object->curr_block * ADC_INDEX_NUM_PRE_BLOCK * ADC_ITEM_BLOCK_NUM;
@@ -408,14 +407,15 @@ void storage_task(void *pvParameters)
             if (read_len > 0) {
                 for (i = 0; i < read_len; i ++) {
                     pItem = (AdcItem_t *)&g_adc_items[index];
+                    // APP_PRINTF("storage_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", pItem->data[SENSOR_FRONT_CURRENT].f, pItem->data[SENSOR_FRONT_VOLTAGE].f, pItem->data[SNESOR_REAR_CURRENT].f, pItem->data[SNESOR_REAR_VOLTAGE].f);
 //                    pNextItem = (AdcItem_t *)&g_adc_items[index + sizeof(AdcItem_t)];
-                    if ((pItem->ts % ADC_ITEM_NUM_PER_SECOND) == 0) {
+                    if ((pItem->ts % ADC_ITEM_NUM_PER_SECOND) == 0 && index > ADC_ITEM_SIZE) {
                         Storage_Write_AdcData(&g_AdcObject, pItem->ts / 1000 - 1, &g_adc_items[0], (ADC_ITEM_SIZE * ADC_ITEM_NUM_PER_SECOND) / EMMC_BLOCK_SIZE, 1);
-                        memcpy(&g_adc_items[0], &g_adc_items[index], (read_len - i) * sizeof(AdcItem_t));
-                        index = (read_len - i) * sizeof(AdcItem_t);
+                        memcpy(&g_adc_items[0], &g_adc_items[index], (read_len - i) * ADC_ITEM_SIZE);
+                        index = (read_len - i) * ADC_ITEM_SIZE;
                         break;
                     } else {
-                        index += sizeof(AdcItem_t);
+                        index += ADC_ITEM_SIZE;
                         if (index >= sizeof(g_adc_items)) {
                             index = 0;
                         }
@@ -443,7 +443,7 @@ uint8_t Alarm_Object_Init(AlarmObject_t *object)
         object->addr = ALARM_MSG_START_ADDR;
         object->info_addr = AlARM_INFO_START_ADDR;
         object->index_addr = ALARM_INDEX_START_ADDR;
-    } else {
+    } else if (g_ConfigInfo.flag == DEV_FLAG_NEXT_ON){
         #if 0
         object->page_num = g_ConfigInfo.page_num;
         object->curr_page = g_ConfigInfo.curr_page;
