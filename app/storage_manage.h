@@ -25,7 +25,7 @@
 #define ADC_INDEX_NUM_PRE_BLOCK  (EMMC_BLOCK_SIZE / ADC_INDEX_ITEM_SIZE)            // 每块可存索引数：64
 #define ADC_INDEX_BLOCK_NUM      (ADC_ITEM_TOTAL_NUM / ADC_INDEX_NUM_PRE_BLOCK)     // 索引需要总块数：480000 / 64 = 7500
 #define ADC_INDEX_START_BLOCK    (ADC_INDEX_START_ADDR / EMMC_BLOCK_SIZE)                          //
-#define ADC_LOCK_TIMEOUT         pdMS_TO_TICKS(100) // 互斥锁超时（100ms）
+#define ADC_LOCK_TIMEOUT         pdMS_TO_TICKS(50) // 互斥锁超时（50ms）
 
 #define ALARM_MSG_START_ADDR     0
 #define AlARM_INFO_START_ADDR    20480
@@ -39,13 +39,13 @@
 #define ALARM_INDEX_NUM_PRE_PAGE (GD55B01GE_PAGE_SIZE / ALARM_INDEX_ITEM_SIZE)
 #define ALARM_INDEX_PAGE_NUM     (ALARM_ITEM_TOATL_NUM / 16) //40
 #define ALARM_INDEX_END_ADDR     (ALARM_INDEX_START_ADDR + ALARM_INDEX_PAGE_NUM * GD55B01GE_PAGE_SIZE)
-#define ALARM_LOCK_TIMEOUT       pdMS_TO_TICKS(100) // 互斥锁超时（100ms）
+#define ALARM_LOCK_TIMEOUT       pdMS_TO_TICKS(50) // 互斥锁超时（50ms）
 
 #define STORAGE_TASK_PRIO        (configMAX_PRIORITIES - 3)     /* 任务优先级 */
 #define STORAGE_STK_SIZE         1024                           /* 任务堆栈大小 */
 
 #define ALARM_TASK_PRIO          (configMAX_PRIORITIES - 2)     /* 任务优先级 */
-#define ALARM_STK_SIZE           512                            /* 任务堆栈大小 */
+#define ALARM_STK_SIZE           1024                           /* 任务堆栈大小 */
 
 /* 数据索引 */
 //#pragma pack(1)

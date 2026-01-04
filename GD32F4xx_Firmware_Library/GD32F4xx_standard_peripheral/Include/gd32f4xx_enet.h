@@ -51,7 +51,7 @@ OF SUCH DAMAGE.
 #endif
 
 #ifndef ENET_TXBUF_NUM
-#define ENET_TXBUF_NUM                   5U                                     /*!< ethernet Tx DMA descriptor number */
+#define ENET_TXBUF_NUM                   32U                                     /*!< ethernet Tx DMA descriptor number */
 #endif
 
 #ifndef ENET_RXBUF_SIZE

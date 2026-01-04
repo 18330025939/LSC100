@@ -57,12 +57,12 @@
 
 /* MEM_SIZE: the size of the heap memory. If the application will send
 a lot of data that needs to be copied, this should be set high. */
-#define MEM_SIZE                (15*1024)
+#define MEM_SIZE                (20*1024)
 
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
-#define MEMP_NUM_PBUF           25
+#define MEMP_NUM_PBUF           30
 /* MEMP_NUM_UDP_PCB: the number of UDP protocol control blocks. One
    per active UDP "connection". */
 #define MEMP_NUM_UDP_PCB        4
@@ -99,7 +99,7 @@ a lot of data that needs to be copied, this should be set high. */
 #define TCP_MSS                 (1500 - 40)	  /* TCP_MSS = (Ethernet MTU - IP header size - TCP header size) */
 
 /* TCP sender buffer space (bytes). */
-#define TCP_SND_BUF             (10*TCP_MSS)
+#define TCP_SND_BUF             (18*TCP_MSS)
 
 /*  TCP_SND_QUEUELEN: TCP sender buffer space (pbufs). This must be at least
   as much as (2 * TCP_SND_BUF/TCP_MSS) for things to work. */
@@ -212,7 +212,7 @@ The STM32F4x7 allows computing and verifying the IP, UDP, TCP and ICMP checksums
 
 #define TCPIP_THREAD_NAME              "lwip"
 #define TCPIP_THREAD_STACKSIZE          1024
-#define TCPIP_MBOX_SIZE                 8
+#define TCPIP_MBOX_SIZE                 60
 
 #define TCPIP_THREAD_PRIO                (configMAX_PRIORITIES - 2) 
 

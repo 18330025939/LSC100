@@ -52,7 +52,7 @@
 #include "FreeRTOS.h"
 #include "bsp_eth.h"
 #include "semphr.h"
-
+#include "rtt_log.h"
 
 #define ETHERNETIF_INPUT_TASK_STACK_SIZE          (350)
 #define ETHERNETIF_INPUT_TASK_PRIO                (configMAX_PRIORITIES - 1)
@@ -96,7 +96,7 @@ static void low_level_init(struct netif *netif)
 {
     uint32_t i;
 
-    printf("\r\n========== Ethernet low-level initialization begins ==========\r\n");
+    APP_PRINTF("\r\n========== Ethernet low-level initialization begins ==========\r\n");
     
     /* set netif MAC hardware address length */
     netif->hwaddr_len = ETHARP_HWADDR_LEN;
@@ -109,32 +109,32 @@ static void low_level_init(struct netif *netif)
     netif->hwaddr[4] =  MAC_ADDR4;
     netif->hwaddr[5] =  MAC_ADDR5;
     
-    printf("[1/7] MAC address: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+    APP_PRINTF("[1/7] MAC address: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
            netif->hwaddr[0], netif->hwaddr[1], netif->hwaddr[2],
            netif->hwaddr[3], netif->hwaddr[4], netif->hwaddr[5]);
 
     /* set netif maximum transfer unit */
     netif->mtu = 1500;
-    printf("[2/7] MTU: %d Byte\r\n", netif->mtu);
+    APP_PRINTF("[2/7] MTU: %d Byte\r\n", netif->mtu);
 
     /* accept broadcast address and ARP traffic */
     netif->flags = NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_LINK_UP;
-    printf("[3/7] Network interface flag: Broadcast | ARP | Link UP\r\n");
+    APP_PRINTF("[3/7] Network interface flag: Broadcast | ARP | Link UP\r\n");
 
     low_netif =netif;
 
     /* create binary semaphore used for informing ethernetif of frame reception */
-    printf("[4/7] Create Received Signal Quantity...\r\n");
+    APP_PRINTF("[4/7] Create Received Signal Quantity...\r\n");
     if (g_rx_semaphore == NULL){
         vSemaphoreCreateBinary(g_rx_semaphore);
         xSemaphoreTake( g_rx_semaphore, 0);
     }
-    printf("[4/7] Received semaphore creation completed\r\n");
+    APP_PRINTF("[4/7] Received semaphore creation completed\r\n");
 
     /* initialize MAC address in ethernet MAC */ 
-    printf("[5/7] Set MAC address to Ethernet hardware...\r\n");
+    APP_PRINTF("[5/7] Set MAC address to Ethernet hardware...\r\n");
     enet_mac_address_set(ENET_MAC_ADDRESS0, netif->hwaddr);
-    printf("[5/7] MAC address setting completed\r\n");
+    APP_PRINTF("[5/7] MAC address setting completed\r\n");
 
     /* initialize descriptors list: chain/ring mode */
     printf("[6/7] Initialize DMA descriptor chain...\r\n");
@@ -145,7 +145,7 @@ static void low_level_init(struct netif *netif)
 #else
     enet_descriptors_chain_init(ENET_DMA_TX);
     enet_descriptors_chain_init(ENET_DMA_RX);
-    printf("      Mode: Standard descriptor chain\r\n");
+    APP_PRINTF("      Mode: Standard descriptor chain\r\n");
 #endif /* SELECT_DESCRIPTORS_ENHANCED_MODE */  
 
     /* enable ethernet Rx interrrupt */
@@ -154,34 +154,34 @@ static void low_level_init(struct netif *netif)
             enet_rx_desc_immediate_receive_complete_interrupt(&rxdesc_tab[i]);
         }
     }
-    printf("      Number of receiving buffers: %d\r\n", ENET_RXBUF_NUM);
-    printf("[6/7] DMA descriptor initialization completed\r\n");
+    APP_PRINTF("      Number of receiving buffers: %d\r\n", ENET_RXBUF_NUM);
+    APP_PRINTF("[6/7] DMA descriptor initialization completed\r\n");
 
 #ifdef CHECKSUM_BY_HARDWARE
     /* enable the TCP, UDP and ICMP checksum insertion for the Tx frames */
-    printf("      Enable hardware checksum (TCP/UDP/ICMP)...\r\n");
+    APP_PRINTF("      Enable hardware checksum (TCP/UDP/ICMP)...\r\n");
     for(i=0; i < ENET_TXBUF_NUM; i++){
         enet_transmit_checksum_config(&txdesc_tab[i], ENET_CHECKSUM_TCPUDPICMP_FULL);
     }
-    printf("      Number of sending buffers: %d\r\n", ENET_TXBUF_NUM);
+    APP_PRINTF("      Number of sending buffers: %d\r\n", ENET_TXBUF_NUM);
 #else
-    printf("      Use software to verify and sum up\r\n");
+    APP_PRINTF("      Use software to verify and sum up\r\n");
 #endif /* CHECKSUM_BY_HARDWARE */
 
     /* create the task that handles the ETH_MAC */
-    printf("[7/7] Create Ethernet input processing task...\r\n");
+    APP_PRINTF("[7/7] Create Ethernet input processing task...\r\n");
     xTaskCreate(ethernetif_input, "ETHERNETIF_INPUT", ETHERNETIF_INPUT_TASK_STACK_SIZE, NULL,
                 ETHERNETIF_INPUT_TASK_PRIO,NULL);
-    printf("      Task Name: ETHERNETIF_INPUT\r\n");
-    printf("      Stack size : %d 字节\r\n", ETHERNETIF_INPUT_TASK_STACK_SIZE);
-    printf("[7/7] Task creation completed\r\n");
+    APP_PRINTF("      Task Name: ETHERNETIF_INPUT\r\n");
+    APP_PRINTF("      Stack size : %d 字节\r\n", ETHERNETIF_INPUT_TASK_STACK_SIZE);
+    APP_PRINTF("[7/7] Task creation completed\r\n");
 
     /* enable MAC and DMA transmission and reception */
-    printf("      Enable MAC and DMA transmission and reception functions...\r\n");
+    APP_PRINTF("      Enable MAC and DMA transmission and reception functions...\r\n");
     enet_enable();
-    printf("      MAC and DMA enabled\r\n");
+    APP_PRINTF("      MAC and DMA enabled\r\n");
     
-    printf("========== Ethernet bottom layer initialization completed ==========\r\n\r\n");
+    APP_PRINTF("========== Ethernet bottom layer initialization completed ==========\r\n\r\n");
 }
 
 

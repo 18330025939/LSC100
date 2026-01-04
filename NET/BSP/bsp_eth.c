@@ -36,6 +36,7 @@ OF SUCH DAMAGE.
 #include "bsp_eth.h"
 #include "systick.h"
 
+#include "rtt_log.h"
 static __IO uint32_t enet_init_status = 0;
 
 static void enet_gpio_config(void);
@@ -75,33 +76,33 @@ void phy_rst(void)
 
 void enet_system_setup(void)
 {
-	printf("\r\n====== Ethernet hardware initialization begins ======\r\n");
+	APP_PRINTF("\r\n====== Ethernet hardware initialization begins ======\r\n");
 	
 	/* configure the GPIO ports for ethernet pins */
 	enet_gpio_config();
-	printf("[1/5] GPIO pin configuration completed.\r\n");
+	APP_PRINTF("[1/5] GPIO pin configuration completed.\r\n");
 	
 	phy_rst();
-	printf("[2/5] PHY chip reset completed.\r\n");
+	APP_PRINTF("[2/5] PHY chip reset completed.\r\n");
 	
 	/* configure the ethernet MAC/DMA */
 	enet_mac_dma_config();
-	printf("[3/5] MAC/DMA configuration completed\r\n");
+	APP_PRINTF("[3/5] MAC/DMA configuration completed\r\n");
 
 	if(0 == enet_init_status) {
-		printf("[error] Ethernet initialization failed enet_init_status = 0\r\n");
-		printf("Attempt to retry initialization...\r\n");
+		APP_PRINTF("[error] Ethernet initialization failed enet_init_status = 0\r\n");
+		APP_PRINTF("Attempt to retry initialization...\r\n");
 		
 		// 重试机制：最多重试3次
 		int retry_count = 0;
 		int max_retries = 3;
 		while((enet_init_status == 0) && (retry_count < max_retries)) {
 			retry_count++;
-			printf("[retry %d/%d] Wait for 2 seconds and retry...\r\n", retry_count, max_retries);
+			APP_PRINTF("[retry %d/%d] Wait for 2 seconds and retry...\r\n", retry_count, max_retries);
 			phy_delay_us(2000*1000);
 			
 			// 重新复位PHY
-			printf("Reset PHY chip again...\r\n");
+			APP_PRINTF("Reset PHY chip again...\r\n");
 			phy_rst();
 			phy_delay_us(1000*1000);
 			
@@ -113,10 +114,10 @@ void enet_system_setup(void)
 #endif
 			
 			if(enet_init_status == 1) {
-				printf("[retry successful] Ethernet initialization successful!\r\n");
+				APP_PRINTF("[retry successful] Ethernet initialization successful!\r\n");
 				break;
 			} else {
-				printf("[retry failed] Status value: %d\r\n", enet_init_status);
+				APP_PRINTF("[retry failed] Status value: %d\r\n", enet_init_status);
 			}
 		}
 		
@@ -133,11 +134,11 @@ void enet_system_setup(void)
 
 	enet_interrupt_enable(ENET_DMA_INT_NIE);
 	enet_interrupt_enable(ENET_DMA_INT_RIE);
-	printf("[4/5] Interrupt enabled completion\r\n");
+	APP_PRINTF("[4/5] Interrupt enabled completion\r\n");
 	
-	printf("[5/5] Ethernet hardware initialization status: %s (Status value: %d)\r\n", 
+	APP_PRINTF("[5/5] Ethernet hardware initialization status: %s (Status value: %d)\r\n", 
 	       (enet_init_status == 1) ? "OK" : "FAIL", enet_init_status);
-	printf("========== Ethernet hardware initialization completed ==========\r\n\r\n");
+	APP_PRINTF("========== Ethernet hardware initialization completed ==========\r\n\r\n");
 }
 /*!
     \brief      configures the ethernet interface
@@ -158,31 +159,31 @@ static void enet_mac_dma_config(void)
 	enet_deinit();
 	 phy_delay_us(1000*1000);
 	if(enet_software_reset())
-		printf("enet_software_reset is OK!\r\n");
+		APP_PRINTF("enet_software_reset is OK!\r\n");
 	else
 	{
 		while(1)
 		{
-			printf("enet_software_reset is ERR!\r\n");
+			APP_PRINTF("enet_software_reset is ERR!\r\n");
 				 phy_delay_us(500*1000);
 		};
 	}
 	phy_delay_us(500*1000);
 	
 	/* configure the parameters which are usually less cared for enet initialization */
-	printf("      [3.3] Initialize Ethernet MAC parameters (fixed 100M full duplex mode)...\r\n");
-	printf("      Wait for the PHY chip to fully stabilize (200ms)...\r\n");
+	APP_PRINTF("      [3.3] Initialize Ethernet MAC parameters (fixed 100M full duplex mode)...\r\n");
+	APP_PRINTF("      Wait for the PHY chip to fully stabilize (200ms)...\r\n");
 	phy_delay_us(200*1000);  // 等待200ms让PHY芯片完全稳定，确保MDIO通信正常
 	
 #ifdef CHECKSUM_BY_HARDWARE
-	printf("      Mode: 100M full duplex, hardware checksum\r\n");
+	APP_PRINTF("      Mode: 100M full duplex, hardware checksum\r\n");
 	enet_init_status = enet_init(ENET_100M_FULLDUPLEX, ENET_AUTOCHECKSUM_DROP_FAILFRAMES, ENET_BROADCAST_FRAMES_PASS);
 #else
 	printf("      Mode: 100M full duplex, software checksum\r\n");
 	enet_init_status = enet_init(ENET_100M_FULLDUPLEX, ENET_NO_AUTOCHECKSUM, ENET_BROADCAST_FRAMES_PASS);
 #endif /* CHECKSUM_BY_HARDWARE */
 	 
-	printf("      [3.3] MAC initialization status: %s (status value: %d)\r\n", 
+	APP_PRINTF("      [3.3] MAC initialization status: %s (status value: %d)\r\n", 
 	       (enet_init_status == 1) ? "OK" : "FAIL", enet_init_status);
 	if(enet_init_status == 0) {
 		// printf("      [Diagnosis] MAC initialization failed, detailed information:\r\n");
@@ -197,7 +198,7 @@ static void enet_mac_dma_config(void)
 		// printf("      6. RMII reference clock (50MHz) not configured correctly\r\n");
 	}
 
-	printf("      [3.3] MAC configuration register: 0x%04X\r\n", ENET_MAC_CFG);//???????cc00 ??????+100M
+	APP_PRINTF("      [3.3] MAC configuration register: 0x%04X\r\n", ENET_MAC_CFG);//???????cc00 ??????+100M
 }
 /*
 phy_value is :7FC0

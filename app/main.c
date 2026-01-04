@@ -12,9 +12,7 @@
 #include "BSP_FM24C02.h"
 #include "FreeRTOS.h"
 #include "app_task.h"
-//#include "udp_echo.h"
 #include "sys_arch.h"
-// #include "eth_comm.h"
 
 #include "SEGGER_RTT.h"
 #include "rtt_log.h"
@@ -43,25 +41,24 @@ int main(void)
 {								
     systick_config();    // system clocks configuration	
     
-    led_init();
-    key_init();
+    led_init();          // 状态指示灯初始化
+    key_init();          // 按键初始化
     #if 0
     debug_uart_init();
     #else
     SEGGER_RTT_ConfigUpBuffer(0, NULL, NULL, 0, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
     APP_PRINTF("RTT Config OK!\r\n");
     #endif
-    relay_init();
-    DI_init();
+    relay_init();        // 继电器初始化    
     nvic_configuration(); 
-    emmcdriveinit();
+    emmcdriveinit();     // EMMC初始化
     sd2505_init();       // 时钟芯片初始化
-	gd55b01ge_init();    // SPI FLASH芯片初始化
+	gd55b01ge_init();    // FLASH芯片初始化
     DS18B20_GPIO_Init(); // 温度传感器初始化
 	fm24c_init();        // EEPROM初始化
 	cm2248_init();       // AD芯片初始化
     lwip_stack_init();   // initilaize the LwIP stack
-    timer0_init();
+    timer0_init();       // TIME0初始化
     app_task();
 }
 

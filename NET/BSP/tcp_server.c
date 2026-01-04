@@ -23,7 +23,6 @@ void tcp_server_task(void *pvParameters)
     // socket_handle_t conn_handle;  // 单个Client连接句柄（如需多Client，可改用数组/链表）
     TcpServerHandle_t *pHandle = (TcpServerHandle_t*)pvParameters;
     
-    D5_LED_ON();
     ret = socket_init(&pHandle->listen_handle, PROTO_TCP, TCP_SERVER_PORT);
     if (ret != 0) { 
         vTaskDelete(NULL); 
@@ -36,7 +35,7 @@ void tcp_server_task(void *pvParameters)
         vTaskDelete(NULL);
         return;
     }
-    printf("TCP Server start, listen port: %d\n", TCP_SERVER_PORT);
+    APP_PRINTF("TCP Server start, listen port: %d\n", TCP_SERVER_PORT);
 
     while (1) {
         ret = socket_tcp_accept(&pHandle->listen_handle, &pHandle->conn_handle);
@@ -44,9 +43,9 @@ void tcp_server_task(void *pvParameters)
             vTaskDelay(pdMS_TO_TICKS(100));
             continue;
         }
-        // APP_PRINTF("TCP Client connected, peer IP: %s, port: %d\n", 
-        //        inet_ntoa(pHandle->conn_handle.peer_addr.sin_addr), 
-        //        ntohs(pHandle->conn_handle.peer_addr.sin_port));
+        APP_PRINTF("TCP Client connected, peer IP: %s, port: %d\n", 
+               inet_ntoa(pHandle->conn_handle.peer_addr.sin_addr), 
+               ntohs(pHandle->conn_handle.peer_addr.sin_port));
 
         while (pHandle->conn_handle.stat == SOCK_STAT_CONNECTED) {
             memset(recv_buf, 0, TCP_RECV_BUF_LEN);
@@ -58,9 +57,11 @@ void tcp_server_task(void *pvParameters)
             }
             
            if(xQueueSend(pHandle->queue, recv_buf, pdMS_TO_TICKS(100)) != pdPASS)
-           {
+            {
                APP_PRINTF("TCP Server queue send error\n");
-           }
+               vTaskDelay(pdMS_TO_TICKS(5));  // 降低CPU占用
+               continue;
+            }
         }
 
         socket_close(&pHandle->conn_handle);

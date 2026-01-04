@@ -1,3 +1,22 @@
+/**
+ ****************************************************************************************************
+ * @file        stroage_manage.c
+ * @author      xxxxxx
+ * @version     V1.0
+ * @date        2025-12-31
+ * @brief       存储管理功能模块
+ ****************************************************************************************************
+ * @attention
+ *
+ * 项目:LSC100
+ *
+ * 修改说明
+ * V1.0 20251231
+ * 第一次发布
+ *
+ ****************************************************************************************************
+ */
+
 #include <string.h>
 #include "FreeRTOS.h"
 #include "task.h"
@@ -14,7 +33,6 @@
 
 AdcObject_t g_AdcObject = {0};
 AlarmObject_t g_AlarmObject = {0};
-// static uint8_t g_buf[EMMC_BLOCK_SIZE * 125] = {0};
 TaskHandle_t StorageTask_Handle; 
 TaskHandle_t AlarmTask_Handle; 
 static uint8_t g_adc_items[(ADC_ITEM_NUM_PER_SECOND + 100) * ADC_ITEM_SIZE] = {0};
@@ -53,8 +71,10 @@ int8_t Storage_Write_AdcData(AdcObject_t *adc, uint32_t timestamp, uint8_t *data
     if (adc->addr >= (ADC_INDEX_START_ADDR / EMMC_BLOCK_SIZE)) {
         adc->addr = 0;
     }
-    // APP_PRINTF("Storage_Write_AdcData, timestamp:%d, block_num:%d, adc->addr:%d, adc->index_addr:%d, adc->item_index:%d, adc->curr_block:%d, adc->block_num:%d\r\n", 
-    //                                timestamp, block_num, adc->addr, adc->index_addr, adc->item_index, adc->curr_block, adc->block_num);
+    #if 0
+    APP_PRINTF("Storage_Write_AdcData, timestamp:%d, block_num:%d, adc->addr:%d, adc->index_addr:%d, adc->item_index:%d, adc->curr_block:%d, adc->block_num:%d\r\n", 
+                                    timestamp, block_num, adc->addr, adc->index_addr, adc->item_index, adc->curr_block, adc->block_num);
+    #endif
     if (flag) {
         adc->item_tables[adc->item_index].timestamp = timestamp;
         adc->item_tables[adc->item_index].addr = addr;
@@ -67,7 +87,9 @@ int8_t Storage_Write_AdcData(AdcObject_t *adc, uint32_t timestamp, uint8_t *data
                     emmcreadblocks((uint8_t *)&adc->item_tables[0], adc->index_addr + 1, 1);
                 }
                 adc->str_time = adc->item_tables[0].timestamp;
+                #if 0
                 APP_PRINTF("Storage_Write_AdcData, ts:%d, ts:%d\r\n", adc->item_tables[0].timestamp, adc->item_tables[1].timestamp);
+                #endif
             }
             
             adc->end_time = adc->item_tables[ADC_INDEX_NUM_PRE_BLOCK - 1].timestamp;
@@ -85,7 +107,9 @@ int8_t Storage_Write_AdcData(AdcObject_t *adc, uint32_t timestamp, uint8_t *data
             g_ConfigInfo.str_time = adc->str_time;
             g_ConfigInfo.end_time = adc->end_time;
             g_config_status = 1;
+            #if 0
             APP_PRINTF("Storage_Write_AdcData, s_ts:%d, e_ts:%d\r\n", adc->str_time, adc->end_time);
+            #endif
         }
     }
 
@@ -115,8 +139,9 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
     memcpy(item_tables, adc->item_tables, sizeof(item_tables));
     for (i = 0; i < index; i ++) {
         if (timestamp == item_tables[i].timestamp) {
+            #if 0
             APP_PRINTF("Storage_Read_AdcData, timestamp:%d, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
-            // readbyetsfromemmc(data, addr, ADC_BLOCK_NUM * EMMC_BLOCK_SIZE);
+            #endif
             emmcreadblocks(data, item_tables[i].addr + block_off, block_num);
             ret = 0;
             goto exit;
@@ -126,16 +151,17 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
     for (num = 0; num < adc->block_num; num++) {
         emmcreadblocks((uint8_t *)&item_tables[0], index_addr + num,  1);
         index = ADC_INDEX_NUM_PRE_BLOCK;
-
+        
         for (i = 0; i < index; i++) {
             if (timestamp == item_tables[i].timestamp) {
+                #if 0
                 APP_PRINTF("Storage_Read_AdcData, timestamp:%d, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
-                // readbyetsfromemmc(data, addr, ADC_BLOCK_NUM * EMMC_BLOCK_SIZE);
+                #endif
                 emmcreadblocks(data, item_tables[i].addr + block_off, block_num);
                 ret = 0;
                 goto exit;
             }
-        }       
+        }      
     }
 exit:
     xSemaphoreGive(adc->mutex);
@@ -167,10 +193,6 @@ int8_t Storage_Write_AlarmMsg(AlarmObject_t *alarm, uint32_t timestamp, uint8_t 
     alarm->index_item.msg_addr = alarm->addr;
     alarm->index_item.info_addr = alarm->info_addr;
     alarm->addr += sizeof(AlarmMsg_t);
-    // if (alarm->addr >= ALARM_ITEM_TOATL_NUM * sizeof(AlarmMsg_t)) {
-    //     alarm->addr = ALARM_MSG_START_ADDR;
-    // }
-    // alarm->index_num += 1;
 #endif
 
     xSemaphoreGive(alarm->mutex);
@@ -223,11 +245,6 @@ int8_t Storage_Read_AlarmMsg(AlarmObject_t *alarm, uint16_t alarm_index, uint8_t
 exit:
 #else
     uint32_t addr = ALARM_MSG_START_ADDR + alarm_index * sizeof(AlarmMsg_t);
-
-    if ((alarm_index + alarm_num) > alarm->index_num) {
-        xSemaphoreGive(alarm->mutex);
-        return -1;
-    }
 
     gd55b01ge_read_data(addr, data, alarm_num * sizeof(AlarmMsg_t));
 
@@ -282,6 +299,9 @@ int8_t Storage_Write_AlarmInfo(AlarmObject_t *alarm, uint32_t timestamp, uint32_
 #else
     // uint32_t info_addr = alarm->info_addr;
     if (timestamp != alarm->index_item.timestamp) {
+        #if 0
+        APP_PRINTF("Storage_Write_AlarmInfo, timestamp:%lu != alarm->index_item.timestamp:%lu\r\n", timestamp, alarm->index_item.timestamp);
+        #endif
         xSemaphoreGive(alarm->mutex);
         return -1;
     }
@@ -383,7 +403,7 @@ uint8_t Adc_Object_Init(AdcObject_t *object)
         object->block_num = g_ConfigInfo.block_num;
         object->curr_block = g_ConfigInfo.curr_block;
         object->addr = object->curr_block * ADC_INDEX_NUM_PRE_BLOCK * ADC_ITEM_BLOCK_NUM;
-        object->index_addr = ADC_INDEX_START_BLOCK + object->curr_block * ADC_INDEX_NUM_PRE_BLOCK * ADC_ITEM_BLOCK_NUM;
+        object->index_addr = ADC_INDEX_START_BLOCK + object->curr_block;
         object->end_time = g_ConfigInfo.end_time;
         object->str_time = g_ConfigInfo.str_time;
     }
@@ -395,7 +415,6 @@ uint8_t Adc_Object_Init(AdcObject_t *object)
 void storage_task(void *pvParameters)
 { 
     AdcItem_t *pItem = NULL;
-//    AdcItem_t *pNextItem = NULL;
     uint16_t read_len;
     uint32_t index = 0;
     uint16_t i = 0;
@@ -407,8 +426,9 @@ void storage_task(void *pvParameters)
             if (read_len > 0) {
                 for (i = 0; i < read_len; i ++) {
                     pItem = (AdcItem_t *)&g_adc_items[index];
-                    // APP_PRINTF("storage_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", pItem->data[SENSOR_FRONT_CURRENT].f, pItem->data[SENSOR_FRONT_VOLTAGE].f, pItem->data[SNESOR_REAR_CURRENT].f, pItem->data[SNESOR_REAR_VOLTAGE].f);
-//                    pNextItem = (AdcItem_t *)&g_adc_items[index + sizeof(AdcItem_t)];
+                    #if 0
+                    APP_PRINTF("storage_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", pItem->data[SENSOR_FRONT_CURRENT].f, pItem->data[SENSOR_FRONT_VOLTAGE].f, pItem->data[SNESOR_REAR_CURRENT].f, pItem->data[SNESOR_REAR_VOLTAGE].f);
+                    #endif
                     if ((pItem->ts % ADC_ITEM_NUM_PER_SECOND) == 0 && index > ADC_ITEM_SIZE) {
                         Storage_Write_AdcData(&g_AdcObject, pItem->ts / 1000 - 1, &g_adc_items[0], (ADC_ITEM_SIZE * ADC_ITEM_NUM_PER_SECOND) / EMMC_BLOCK_SIZE, 1);
                         memcpy(&g_adc_items[0], &g_adc_items[index], (read_len - i) * ADC_ITEM_SIZE);
@@ -477,7 +497,6 @@ void alarm_task(void *pvParameters)
                     ALARM_LED_ON();
                     Storage_Write_AlarmMsg(&g_AlarmObject, alarm_msg.ts, (uint8_t *)&alarm_msg);
                 } else if (alarm_msg.type == BUS_ALARM_SAVE) {
-                    APP_PRINTF("alarm_task, alarm_msg.type == BUS_ALARM_SAVE\r\n");
                     ret = Storage_Read_AdcData(&g_AdcObject, alarm_msg.ts, 0, g_adc_data, sizeof(g_adc_data) / EMMC_BLOCK_SIZE);
                     if (ret == 0) {
                         Storage_Write_AlarmInfo(&g_AlarmObject, g_AlarmNotify.alarm_ts + 1, off, g_adc_data, sizeof(g_adc_data), g_AlarmNotify.index >= 3 ? 1 : 0);

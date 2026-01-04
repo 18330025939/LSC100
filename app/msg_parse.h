@@ -66,7 +66,6 @@
 
 #define QW_HConvert(x)  ((uint64_t)DW_HConvert(x) << 32 | DW_HConvert((uint8_t*)(x) + 4))
 
-#define BCD_TO_DEC(b) (((((b) >> 4) & 0x0F) * 10) + ((b) & 0x0F))
 
 #define DEV_FLAG_FIRST_ON   0x5A
 #define DEV_FLAG_NEXT_ON    0xA5
@@ -114,11 +113,6 @@ typedef struct
 {
     uint16_t usCrc;      /* 校验 */
 } MsgFramCrc_t; 
-
-//typedef struct 
-//{
-
-//} ConfigInfoReq_t;
 
 typedef struct 
 {
@@ -259,11 +253,11 @@ typedef struct
 } MsgPraseInterface_t;
 
 
-#define MSGPROC_TASK_PRIO     (configMAX_PRIORITIES - 2)
+#define MSGPROC_TASK_PRIO     (configMAX_PRIORITIES - 3)
 #define MSGPROC_STACK_SIZE    1024
 
 #define MSGSEND_TASK_PRIO     (configMAX_PRIORITIES - 3)
-#define MSGSEND_STACK_SIZE    1024
+#define MSGSEND_STACK_SIZE    512
 
 typedef struct
 {

@@ -1,3 +1,22 @@
+/**
+ ****************************************************************************************************
+ * @file        adc_sample.c
+ * @author      xxxxxx
+ * @version     V1.0
+ * @date        2025-12-31
+ * @brief       ADC采样功能模块
+ ****************************************************************************************************
+ * @attention
+ *
+ * 项目:LSC100
+ *
+ * 修改说明
+ * V1.0 20251231
+ * 第一次发布
+ *
+ ****************************************************************************************************
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -258,12 +277,11 @@ uint64_t TimeSync_Get_Absolute_Time(uint64_t curr_tick, SystemTime_t *time)
     if(xSemaphoreTake(g_TimeSync.mutex, pdMS_TO_TICKS(10)) == pdPASS) {
         memcpy(time, &g_TimeSync.sys_time, sizeof(SystemTime_t));
         #if 0
-        // tick_diff = curr_tick - g_TimeSync.tick_base; // 1. 计算从同步后到当前的毫秒差
-        total_ms_offset = g_TimeSync.ms_offset + (curr_tick - g_TimeSync.tick_base);  // 2. 总毫秒偏移 = 同步时的毫秒偏移 + 采样差
-        add_sec = total_ms_offset / 1000;         // 3. 计算需要追加的秒数（跨秒处理）
-        final_ms = total_ms_offset % 1000;         // 4. 最终毫秒部分（0~999）
+        total_ms_offset = g_TimeSync.ms_offset + (curr_tick - g_TimeSync.tick_base);  // 总毫秒偏移 = 同步时的毫秒偏移 + 采样差
+        add_sec = total_ms_offset / 1000;         // 计算需要追加的秒数（跨秒处理）
+        final_ms = total_ms_offset % 1000;        // 最终毫秒部分（0~999）
         abs_time = (uint64_t)(g_TimeSync.rtc_base_sec  + add_sec);
-        abs_time = abs_time * 1000 + final_ms; // 5. 拼接最终毫秒级时间戳
+        abs_time = abs_time * 1000 + final_ms;    // 拼接最终毫秒级时间戳
         #else
         abs_time = (uint64_t)(g_TimeSync.rtc_base_sec) * 1000;
         abs_time += curr_tick % 1000;
@@ -289,23 +307,7 @@ void time_sync_task(void *pvParameters)
         return;
     }
 
-    // sd2505_get_time(&time);
-    // g_TimeSync.flag = 0;
-    // g_TimeSync.sys_time.ucYear = time.ucYear;
-    // g_TimeSync.sys_time.ucMonth = time.ucMonth;
-    // g_TimeSync.sys_time.ucDay = time.ucDay;
-    // g_TimeSync.sys_time.ucHour = time.ucHour;
-    // g_TimeSync.sys_time.ucMin = time.ucMinute;
-    // g_TimeSync.sys_time.ucScd = time.ucSecond;
-    // g_TimeSync.rtc_base_sec = datetime_to_timestamp(bcd_to_dec(g_TimeSync.sys_time.ucYear) + 2000,
-    //                                                 bcd_to_dec(g_TimeSync.sys_time.ucMonth),
-    //                                                 bcd_to_dec(g_TimeSync.sys_time.ucDay),
-    //                                                 bcd_to_dec(g_TimeSync.sys_time.ucHour),
-    //                                                 bcd_to_dec(g_TimeSync.sys_time.ucMin),
-    //                                                 bcd_to_dec(g_TimeSync.sys_time.ucScd));
-
     while(1) {
-        #if 1
         if(xSemaphoreTake(g_TimeSync.mutex, pdMS_TO_TICKS(10)) == pdPASS) {
             #if 1
             sd2505_get_time(&time);
@@ -316,30 +318,25 @@ void time_sync_task(void *pvParameters)
             g_TimeSync.sys_time.ucMin = time.ucMinute;
             g_TimeSync.sys_time.ucScd = time.ucSecond;
             #endif
-            // if (g_TimeSync.flag) {
             g_TimeSync.rtc_base_sec = datetime_to_timestamp(bcd_to_dec(g_TimeSync.sys_time.ucYear) + 2000,
                                                         bcd_to_dec(g_TimeSync.sys_time.ucMonth),
                                                         bcd_to_dec(g_TimeSync.sys_time.ucDay),
                                                         bcd_to_dec(g_TimeSync.sys_time.ucHour),
                                                         bcd_to_dec(g_TimeSync.sys_time.ucMin),
                                                         bcd_to_dec(g_TimeSync.sys_time.ucScd));
-            //     g_TimeSync.flag = 0;                                       
-            // } else {
-            //     g_TimeSync.rtc_base_sec += 1;
-            // }
             
             #if 0
-            g_TimeSync.ms_offset = g_sample_tick % 1000; // 2. 计算同步时刻的毫秒偏移（tick取模1000）
-            g_TimeSync.tick_base = g_sample_tick; // 3. 记录同步时的采样计数值
-            // g_TimeSync.sync_valid = 1; // 4. 标记同步有效
+            g_TimeSync.ms_offset = g_sample_tick % 1000; // 计算同步时刻的毫秒偏移（tick取模1000）
+            g_TimeSync.tick_base = g_sample_tick;        // 记录同步时的采样计数值
             #endif
             xSemaphoreGive(g_TimeSync.mutex);
         }
+        #if 0
+        APP_PRINTF("time_sync_task, time:%x-%x-%x %x:%x:%x, g_TimeSync.rtc_base_sec:%lu, g_TimeSync.tick_base:%lu\r\n", 
+                                    g_TimeSync.sys_time.ucYear, g_TimeSync.sys_time.ucMonth, g_TimeSync.sys_time.ucDay,
+                                    g_TimeSync.sys_time.ucHour, g_TimeSync.sys_time.ucMin, g_TimeSync.sys_time.ucScd,
+                                    g_TimeSync.rtc_base_sec, g_TimeSync.tick_base);
         #endif
-        // APP_PRINTF("time_sync_task, time:%x-%x-%x %x:%x:%x, g_TimeSync.rtc_base_sec:%lu, g_TimeSync.tick_base:%lu\r\n", 
-        //                             g_TimeSync.sys_time.ucYear, g_TimeSync.sys_time.ucMonth, g_TimeSync.sys_time.ucDay,
-        //                             g_TimeSync.sys_time.ucHour, g_TimeSync.sys_time.ucMin, g_TimeSync.sys_time.ucScd,
-        //                             g_TimeSync.rtc_base_sec, g_TimeSync.tick_base);
         RUN_LED_TOGLE();
 
         if (g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
@@ -408,19 +405,21 @@ static void Adc_Check_Alarm(AdcItem_t *item)
 
     if (item->data[SENSOR_FRONT_CURRENT].f > BUS_CURRENT_IDLE_THRESHOLD) {
         f_v = CALC_BUS_CURRENT_LOW_THRESHOLD(item->data[SENSOR_FRONT_VOLTAGE].f, g_ConfigInfo.f_Vmin.f);
-        f_v = CALC_BUS_CURRENT_UP_THRESHOLD(item->data[SENSOR_FRONT_VOLTAGE].f, g_ConfigInfo.f_Vmax.f);
+        f_v = CALC_BUS_CURRENT_UP_THRESHOLD(f_v, g_ConfigInfo.f_Vmax.f);
         if (item->data[SENSOR_FRONT_CURRENT].f > f_v) { 
             flag |= 1 << 0;
         }
     }
     if (item->data[SNESOR_REAR_CURRENT].f > BUS_CURRENT_IDLE_THRESHOLD) {
         r_v = CALC_BUS_CURRENT_LOW_THRESHOLD(item->data[SNESOR_REAR_VOLTAGE].f, g_ConfigInfo.r_Vmin.f);
-        r_v = CALC_BUS_CURRENT_UP_THRESHOLD(item->data[SNESOR_REAR_VOLTAGE].f, g_ConfigInfo.r_Vmax.f);
+        r_v = CALC_BUS_CURRENT_UP_THRESHOLD(r_v, g_ConfigInfo.r_Vmax.f);
         if (item->data[SNESOR_REAR_CURRENT].f > r_v) {
             flag |= 1 << 1;
         }
     }
-    // APP_PRINTF("Adc_Check_Alarm, r_c:%f, r_Vmin;%f, r_Vmax;%f, ts:%llu\r\n", item->data[SNESOR_REAR_CURRENT].f, r_Vmin, r_Vmax, item->ts);
+    #if 0
+    APP_PRINTF("Adc_Check_Alarm, r_c:%f, r_Vmin;%f, r_Vmax;%f, ts:%llu\r\n", item->data[SNESOR_REAR_CURRENT].f, r_Vmin, r_Vmax, item->ts);
+    #endif
     if (flag) {
         if (xSemaphoreTake(g_AlarmNotify.mutex, pdMS_TO_TICKS(10)) != pdPASS) {
             return ; 
@@ -474,6 +473,7 @@ static void Adc_Clear_Alarm(uint16_t raw_data)
         g_AlarmNotify.alarm_sta = ALARM_STA_CLEARED;
         ALARM1_RECOVERY();
         ALARM_LED_OFF();
+        g_AlarmNotify.type = BUS_ALARM_NONE;
     }
 
     xSemaphoreGive(g_AlarmNotify.mutex);
@@ -503,7 +503,6 @@ static void Adc_Save_Alarm(void)
 
     g_AlarmNotify.index += 1;
     if (g_AlarmNotify.index >= 3 && g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
-        g_AlarmNotify.type = BUS_ALARM_NONE;
         g_AlarmNotify.save_sta = ALARM_STA_END_SAVE;
     }
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -532,32 +531,29 @@ void sample_task(void *pvParameters)
         {
             // taskENTER_CRITICAL();// 关调度器，保证时序不被打断
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i++) {
-                item.raw_data[i] = cm2248_start_read_data();
-                // cm2248_read_both_channels(&item.raw_data[i], &raw_adc[i]);
+                // item.raw_data[i] = cm2248_start_read_data();
+                cm2248_read_both_channels(&item.raw_data[i], &raw_adc[i]);
             }
             cm2248_start_conv();
             // taskEXIT_CRITICAL(); // 开调度器
             item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i ++) {
-                sensor_data = ((float)item.raw_data[i] / 65536.0f) * 10.0f;//65535.0f) * (2.0f * 10.0f) - 10.0f;// 32768.0f) * 10.0f;
+                sensor_data = ((float)item.raw_data[i] / 65536.0f) * 10.0f;
                 if (i % 2 == 0) {
                     item.data[i].f = CONVERT_SENSOR_TO_BUS_CURRENT(sensor_data);
                 } else {
                     item.data[i].f = CONVERT_SENSOR_TO_BUS_VOLTAGE(sensor_data);
                 }
             }
+            Adc_Clear_Alarm(raw_adc[0]);
             if (item.data[SENSOR_FRONT_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SENSOR_FRONT_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD &&
                 item.data[SNESOR_REAR_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SNESOR_REAR_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD) {
                 continue;
             }
-            // APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f);
-            // if (item.data[SENSOR_FRONT_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SENSOR_FRONT_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD &&
-            //     item.data[SNESOR_REAR_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SNESOR_REAR_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD) {
-            //     continue;
-            // }
-
+            #if 0
+            APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f);
+            #endif
             Adc_Cache_Write_One((AdcItemCache_t *)&g_AdcItemCache, (AdcItem_t *)&item);
-            Adc_Clear_Alarm(raw_adc[0]);
             Adc_Check_Alarm(&item);
         }
     }
@@ -568,8 +564,6 @@ void adc_sample_start(void)
     Alarm_Notify_Init(&g_AlarmNotify);
 
     Adc_Cache_Init(&g_AdcItemCache);
-
-    APP_PRINTF("AdcItem_t size:%d, SystemTime_t size:%d\r\n", sizeof(AdcItem_t), sizeof(SystemTime_t));
     
     xTaskCreate((TaskFunction_t)time_sync_task,             // 任务函数
                 (const char*   )"time_sync_task",           // 任务名称
@@ -578,7 +572,6 @@ void adc_sample_start(void)
                 (UBaseType_t   )TIME_SYNC_TASK_PRIO,        // 任务优先级（低于定时器中断优先级）
                 (TaskHandle_t* )&TimeSyncTask_Handle);      // 任务句柄
 
-    // 创建接收定时器通知的任务
     xTaskCreate((TaskFunction_t)sample_task,                // 任务函数
                 (const char*   )"sample_task",              // 任务名称
                 (uint16_t      )SAMPLE_STK_SIZE,            // 任务栈大小

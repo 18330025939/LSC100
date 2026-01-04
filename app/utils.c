@@ -164,7 +164,6 @@ static uint8_t get_days_of_month(uint16_t year, uint8_t month)
 uint32_t datetime_to_timestamp(uint16_t year, uint8_t month, uint8_t day, 
                                uint8_t hour, uint8_t min, uint8_t sec)
 {
-    // APP_PRINTF("datetime_to_timestamp, time:%d-%d-%d %d:%d:%d\r\n", year, month, day, hour, min, sec);
     if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
         hour > 23 || min > 59 || sec > 59) {
         return 0;

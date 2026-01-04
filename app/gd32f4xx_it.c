@@ -187,8 +187,6 @@ void ENET_IRQHandler(void)
     enet_interrupt_flag_clear(ENET_DMA_INT_FLAG_NI_CLR);
 
     /* switch tasks if necessary */
-    if(pdFALSE != xHigherPriorityTaskWoken) {
-        portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-    }
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
