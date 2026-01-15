@@ -69,6 +69,36 @@ void delay_ms(uint32_t count)
     while(0U != delay){
     }
 }
+/*!
+    \brief      微秒延时函数
+    \param[in]  nus: 要延时的微秒数
+    \param[out] none
+    \retval     none
+    \note       纯寄存器空循环
+*/
+void delay_us(uint32_t nus)
+{
+    uint32_t ticks;
+    uint32_t told, tnow, tcnt = 0;
+    uint32_t reload = SysTick->LOAD;
+    ticks = nus * (SystemCoreClock / 1000000U);
+    told = SysTick->VAL;
+    while(1)
+    {
+        tnow = SysTick->VAL;
+        if(tnow != told)
+        {
+            if(tnow < told)
+                tcnt += told - tnow;
+            else 
+                tcnt += reload - tnow + told;
+            told = tnow;
+            if(tcnt >= ticks) break;
+        }
+    }
+
+}
+
 
 /*!
     \brief      get system tick count

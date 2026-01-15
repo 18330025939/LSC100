@@ -26,7 +26,8 @@ int rtt_log(const char *fmt,...)
 
 int APP_PRINTF(const char *fmt,...)
 {
-    int n;
+    int n = 0;
+#if 0
     va_list args;
     
     va_start(args,fmt);
@@ -40,5 +41,6 @@ int APP_PRINTF(const char *fmt,...)
         SEGGER_RTT_Write(0,rrt_log_buf,n);
     }
     va_end(args);
+#endif
     return n;
 }

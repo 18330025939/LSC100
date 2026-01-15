@@ -35,14 +35,62 @@ void led_init(void)
 
 }
 
+__weak void cal_Key1_irq_handler_cb(void)
+{
+
+}
+
+__weak void cal_Key2_irq_handler_cb(void)
+{
+
+}
+
+/*!
+    \brief      this function handles external lines 10 to 15 interrupt request
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void EXTI10_15_IRQHandler(void)
+{
+    if (RESET != exti_interrupt_flag_get(CAL_KEY1_EXTI_LINE)) {
+        exti_interrupt_flag_clear(CAL_KEY1_EXTI_LINE);
+        cal_Key1_irq_handler_cb();
+    }
+
+    if (RESET != exti_interrupt_flag_get(CAL_KEY2_EXTI_LINE)) {
+        exti_interrupt_flag_clear(CAL_KEY2_EXTI_LINE);
+        cal_Key2_irq_handler_cb();
+    }
+}
+
 
 void key_init(void)
 {
  
-    rcu_periph_clock_enable(KEY_K1_RCU);//使能时钟
+    // rcu_periph_clock_enable(KEY_K1_RCU);//使能时钟
+    rcu_periph_clock_enable(CAL_KEY1_GPIO_CLK);
+    // rcu_periph_clock_enable(CAL_KEY2_GPIO_CLK);
+    rcu_periph_clock_enable(RCU_SYSCFG);
 
-    gpio_mode_set(KEY_K1_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, KEY_K1_PIN);//设置为输入模式
-    gpio_mode_set(KEY_K2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, KEY_K2_PIN);
+    gpio_mode_set(CAL_KEY1_GPIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, CAL_KEY1_GPIO_PIN);
+    gpio_mode_set(CAL_KEY2_GPIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, CAL_KEY2_GPIO_PIN);
+    // gpio_mode_set(KEY_K1_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, KEY_K1_PIN);//设置为输入模式
+    // gpio_mode_set(KEY_K2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, KEY_K2_PIN);
+
+    nvic_irq_enable(CAL_KEY1_EXTI_IRQn, 3U, 1U);
+    // nvic_irq_enable(CAL_KEY2_EXTI_IRQn, 1U, 1U);
+
+    /* connect key EXTI line to key GPIO pin */
+    syscfg_exti_line_config(CAL_KEY1_EXTI_PORT_SOURCE, CAL_KEY1_EXTI_PIN_SOURCE);
+    syscfg_exti_line_config(CAL_KEY2_EXTI_PORT_SOURCE, CAL_KEY2_EXTI_PIN_SOURCE);
+
+    /* configure key EXTI line */
+    exti_init(CAL_KEY1_EXTI_LINE, EXTI_INTERRUPT, EXTI_TRIG_FALLING);
+    exti_interrupt_flag_clear(CAL_KEY1_EXTI_LINE);
+
+    exti_init(CAL_KEY2_EXTI_LINE, EXTI_INTERRUPT, EXTI_TRIG_FALLING);
+    exti_interrupt_flag_clear(CAL_KEY2_EXTI_LINE);
 }
 
 void DI_init(void)

@@ -656,6 +656,11 @@
               <FileType>1</FileType>
               <FilePath>..\BSP\src\BSP_FM24C02.c</FilePath>
             </File>
+            <File>
+              <FileName>BSP_ONEWIRE.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\BSP\src\BSP_ONEWIRE.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

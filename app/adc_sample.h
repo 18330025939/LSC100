@@ -15,8 +15,8 @@
 #define BUS_CURRENT_SENSOR_FULL_V    1.0f      // 满量程对应的传感器电压
 #define BUS_CURRENT_CONVERT_RATIO    (BUS_CURRENT_FULL_SCALE_A / BUS_CURRENT_SENSOR_FULL_V) // 电流换算系数（435）
 
-#define BUS_VOLTAGE_IDLE_THRESHOLD   350.0f    // 母线电压空置阈值
-#define BUS_CURRENT_IDLE_THRESHOLD   350.0f    // 母线电流控制阈值
+#define BUS_VOLTAGE_IDLE_THRESHOLD   200.0f    // 母线电压空置阈值
+#define BUS_CURRENT_IDLE_THRESHOLD   200.0f    // 母线电流控制阈值
 
 #define D1_LOGIC_HIGH_VOLTAGE_MAX    74.0f     // 逻辑高电平最大电压    
 #define D1_LOGIC_HIGH_VOLTAGE_MIN    50.0f     // 逻辑高电平最小电压
@@ -38,16 +38,16 @@
     ((actual_bus_voltage < voltage_low_lim) ? voltage_low_lim : actual_bus_voltage)
 
 #define CALC_BUS_CURRENT_UP_THRESHOLD(actual_bus_voltage, voltage_up_lim) \
-    ((actual_bus_voltage > voltage_up_lim) ? voltage_up_lim : actual_bus_voltage)
+    ((actual_bus_voltage < voltage_up_lim) ? actual_bus_voltage : voltage_up_lim)
 
 /************************ 报警消除判定 ************************/
 #define IS_CLEANR_ALARM(actual_bus_current) \
-    ((actual_bus_current > (D1_LOGIC_HIGH_VOLTAGE_MIN * (1.0f / 11.0f)) && actual_bus_current < (D1_LOGIC_HIGH_VOLTAGE_MAX * (1.0f / 11.0f))) ? 1 : 0)
+    ((actual_bus_current > (D1_LOGIC_HIGH_VOLTAGE_MIN * 0.091f) && actual_bus_current < (D1_LOGIC_HIGH_VOLTAGE_MAX * 0.091f)) ? 1 : 0)
 
 #define SAMPLE_TASK_PRIO        (configMAX_PRIORITIES - 1)      /* 任务优先级 */
-#define SAMPLE_STK_SIZE 	    512                             /* 任务堆栈大小 */ 
+#define SAMPLE_STK_SIZE 	    1024                            /* 任务堆栈大小 */ 
 #define TIME_SYNC_TASK_PRIO     (configMAX_PRIORITIES - 2)      /* 任务优先级 */
-#define TIME_SYNC_STK_SIZE 	    512                             /* 任务堆栈大小 */ 
+#define TIME_SYNC_STK_SIZE 	    1024                            /* 任务堆栈大小 */ 
 
 #define ADC_SAMPLE_CHANNEL      4
 
@@ -79,13 +79,14 @@ typedef struct
     uint64_t ts;
     uint16_t raw_data[4];
     FloatUInt32_t data[4];
-    uint8_t rsvd[26];
+    FloatUInt32_t temp;
+    uint8_t rsvd[22];
 } AdcItem_t;
 #pragma pack()
 /* ADC数据缓存 */
 typedef struct
 {
-    AdcItem_t item[600];
+    AdcItem_t item[800];
     uint32_t wr_idx;                   // 写指针
     uint32_t rd_idx;                   // 读指针
     uint32_t count;                    // 当前缓存数据量
@@ -105,6 +106,7 @@ typedef enum
 } AlarmType;
 
 /* 报警信息 */
+#pragma pack(1)
 typedef struct
 {
     SystemTime_t time;
@@ -113,6 +115,18 @@ typedef struct
     AlarmType type;
     uint8_t ucRsvd[19];
 } AlarmMsg_t;
+#pragma pack()
+typedef struct 
+{
+    FloatUInt32_t adc_data[4];
+    uint16_t len;
+} Ma_t;
+
+typedef struct
+{
+    uint32_t data[4]; 
+    uint8_t num;
+} Cal_t;
 
 
 #define ALARM_STA_RAISED   0xA0

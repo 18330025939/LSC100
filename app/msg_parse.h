@@ -39,6 +39,21 @@
 #define MSG_SIGN_SET_TIME_REQ       0x15
 #define MSG_SIGN_SET_TIME_RES       0x85
 
+#define MSG_SIGN_SET_F_VBIAS_REQ    0x16
+#define MSG_SIGN_SET_F_VBIAS_RES    0x86
+
+#define MSG_SIGN_SET_F_CBIAS_REQ    0x17
+#define MSG_SIGN_SET_F_CBIAS_RES    0x87
+
+#define MSG_SIGN_SET_R_VBIAS_REQ    0x18
+#define MSG_SIGN_SET_R_VBIAS_RES    0x88
+
+#define MSG_SIGN_SET_R_CBIAS_REQ    0x19
+#define MSG_SIGN_SET_R_CBIAS_RES    0x89
+
+#define MSG_SIGN_CLEAR_DATA_REQ     0x1A
+#define MSG_SIGN_CLEAR_DATA_RES     0x8A
+
 #define MSG_SIGN_ALARM_INFO_REQ     0x20
 #define MSG_SIGN_ALARM_INFO_RES     0x90  
 
@@ -84,6 +99,15 @@ typedef struct
     FloatUInt32_t r_Vmin;
     FloatUInt32_t r_Cmax;
     FloatUInt32_t r_Cmin;
+    FloatUInt32_t f_Vbias0;
+    FloatUInt32_t f_Cbias0;
+    FloatUInt32_t r_Vbias0;
+    FloatUInt32_t r_Cbias0;
+    FloatUInt32_t f_Vgain;
+    FloatUInt32_t f_Cgain;
+    FloatUInt32_t r_Vgain;
+    FloatUInt32_t r_Cgain;
+    uint8_t cal_flag;
 
     #if 0
     uint16_t page_num;
@@ -97,6 +121,7 @@ typedef struct
     uint32_t end_time;
 } ConfigInfo_t;
 #pragma pack()
+
 extern ConfigInfo_t g_ConfigInfo;
 
 
@@ -118,12 +143,17 @@ typedef struct
 {
     uint8_t hw[3];
     uint8_t sw[3];
+    FloatUInt32_t temp;
+    FloatUInt32_t f_VBias;
+    FloatUInt32_t f_CBias;
+    FloatUInt32_t r_VBias;
+    FloatUInt32_t r_CBias;
     FloatUInt32_t f_Vmax;
     FloatUInt32_t f_Vmin;
     FloatUInt32_t r_Vmax;
     FloatUInt32_t r_Vmin;
     SystemTime_t stTime;
-    uint8_t Rsvd[3];
+    uint8_t Rsvd[9];
 } ConfigInfoRes_t;
 
 typedef struct 
@@ -137,6 +167,19 @@ typedef struct
     FloatUInt32_t uVmin;
     uint8_t Rsvd[5];
 } SetFrontVminReq_t, SetRearVminReq_t;
+
+typedef struct 
+{
+    FloatUInt32_t uBias;
+    uint8_t Rsvd[5];
+} SetFrontVBiasReq_t, SetFrontCBiasReq_t, SetRearVBiasReq_t, SetRearCBiasReq_t;
+
+typedef struct 
+{
+    SystemTime_t stTime;
+    uint8_t usStatus;
+    uint8_t Rsvd[2];
+} ClearDataRes_t;
 
 //typedef struct
 //{
@@ -184,8 +227,9 @@ typedef struct
     uint16_t usCurrSequ;
     SystemTime_t stTime;
     uint64_t ullTs;
+    FloatUInt32_t temp;
     SampleData_t data[50];
-    uint8_t usRsvd[7];
+    uint8_t usRsvd[3];
 } AlarmDataRes_t;
 #endif
 typedef struct
@@ -225,8 +269,9 @@ typedef struct
     uint32_t ulCurrSequ;
     SystemTime_t stTime;
     uint64_t ullTs;
+    FloatUInt32_t temp;
     SampleData_t data[50];
-    uint8_t usRsvd[3];
+    uint8_t usRsvd[15];
 } SampleDataRes_t;
 #endif
 
@@ -257,7 +302,7 @@ typedef struct
 #define MSGPROC_STACK_SIZE    1024
 
 #define MSGSEND_TASK_PRIO     (configMAX_PRIORITIES - 3)
-#define MSGSEND_STACK_SIZE    512
+#define MSGSEND_STACK_SIZE    1024
 
 typedef struct
 {

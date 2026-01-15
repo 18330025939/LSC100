@@ -47,6 +47,7 @@ void delay_decrement(void);
 uint32_t get_system_tick(void);
 /* delay us by nop */
 void delay_us_nop(uint32_t us);
+void delay_us(uint32_t nus);
 /* delay ms by nop */
 void delay_ms_nop(uint32_t ms);
 #endif /* SYS_TICK_H */

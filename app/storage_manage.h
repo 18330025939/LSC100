@@ -105,6 +105,8 @@ int8_t Storage_Write_AlarmInfo(AlarmObject_t *alarm, uint32_t timestamp, uint32_
 int8_t Storage_Read_AlarmInfo(AlarmObject_t *alarm, uint32_t timestamp, uint32_t off, uint8_t *data, uint32_t len);
 
 void storage_manage_start(void);
+void Storage_Clear_AlarmData(AlarmObject_t *alarm);
+void Storage_Clear_AdcData(AdcObject_t *adc);
 // int8_t Storage_Write_AlarmMsg(AlarmObject_t *alarm, uint32_t timestamp, uint8_t *data, uint32_t len);
 
 #endif /* STORAGE_MANAGER_H */

@@ -54,11 +54,15 @@ int main(void)
     emmcdriveinit();     // EMMC初始化
     sd2505_init();       // 时钟芯片初始化
 	gd55b01ge_init();    // FLASH芯片初始化
-    DS18B20_GPIO_Init(); // 温度传感器初始化
+    ds18b20_init();      // 温度传感器初始化
 	fm24c_init();        // EEPROM初始化
 	cm2248_init();       // AD芯片初始化
     lwip_stack_init();   // initilaize the LwIP stack
     timer0_init();       // TIME0初始化
+    ds18b20_read_temp();
+    float temp = 0.0f;
+    temp = ds18b20_get_temp();
+    APP_PRINTF("current_temp:%lf\r\n", temp);
     app_task();
 }
 

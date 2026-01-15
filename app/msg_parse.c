@@ -53,6 +53,7 @@ static void kt_AlarmData(void *arg);
 static void kt_SampleInfo(void *arg);
 static void kt_SampleData(void *arg);
 static void kt_SetSysTime(void *arg);
+static void kt_ClearData(void *arg);
 
 const static MsgPraseInterface_t g_MsgPraseInterTable[] = {
     {MSG_SIGN_CONFIG_INFO_REQ, kt_ConfigInfo    },
@@ -65,6 +66,7 @@ const static MsgPraseInterface_t g_MsgPraseInterTable[] = {
     {MSG_SIGN_SAMPLE_INFO_REQ, kt_SampleInfo    },
     {MSG_SIGN_SAMPLE_DATA_REQ, kt_SampleData    },
     {MSG_SIGN_SET_TIME_REQ,    kt_SetSysTime    },
+    {MSG_SIGN_CLEAR_DATA_REQ,  kt_ClearData     },
     {0xFF,                     NULL,            }
 };
 
@@ -150,6 +152,8 @@ static void kt_ConfigInfo(void *arg)
     pstConfig = (ConfigInfoRes_t*)(buf + sizeof(MsgFramHdr_t));
     memcpy(pstConfig->hw, g_ConfigInfo.hw, sizeof(g_ConfigInfo.hw));
     memcpy(pstConfig->sw, g_ConfigInfo.sw, sizeof(g_ConfigInfo.sw));
+    pstConfig->temp.f = ds18b20_get_temp();
+    pstConfig->temp.u = DW_HConvert(&pstConfig->temp.u);
     pstConfig->f_Vmax.u = DW_HConvert(&g_ConfigInfo.f_Vmax.u);
     pstConfig->f_Vmin.u = DW_HConvert(&g_ConfigInfo.f_Vmin.u);
     pstConfig->r_Vmax.u = DW_HConvert(&g_ConfigInfo.r_Vmax.u);
@@ -215,7 +219,98 @@ static void kt_SetRearVmin(void *arg)
     g_config_status = 1;
 }
 
+static void kt_ClearData(void *arg)
+{
+    ClearDataRes_t *pstClear = NULL;
+    uint8_t buf[MAX_QUEUE_DATA_SIZE] = {0};
+    MsgFramHdr_t *pstMsgHdr =NULL;
+    MsgFramCrc_t *pstMsgCrc = NULL;
+    uint16_t len = 0;
 
+    if (arg == NULL) {
+        return; 
+    }
+
+    g_ConfigInfo.block_num = 0;
+    g_ConfigInfo.curr_block = 0;
+    g_ConfigInfo.str_time = 0;
+    g_ConfigInfo.end_time = 0;
+    g_ConfigInfo.alarm_num = 0;
+    Storage_Clear_AlarmData(&g_AlarmObject);
+    Storage_Clear_AdcData(&g_AdcObject);
+
+    pstMsgHdr = (MsgFramHdr_t *)buf;
+    pstMsgHdr->usHdr = MSG_DATA_FRAM_HDR;
+    len = sizeof(MsgFramHdr_t) + sizeof(ClearDataRes_t) + sizeof(MsgFramCrc_t);
+    pstMsgHdr->usLen = HConvert(&len);
+    pstMsgHdr->ucSign = MSG_SIGN_CLEAR_DATA_RES;
+    pstClear = (ClearDataRes_t *)(buf + sizeof(MsgFramHdr_t));
+    memcpy(&pstClear->stTime, &g_TimeSync.sys_time, sizeof(SystemTime_t));
+    pstClear->usStatus = 1;
+    pstMsgCrc = (MsgFramCrc_t*)(buf + sizeof(MsgFramHdr_t) + sizeof(ClearDataRes_t));
+    pstMsgCrc->usCrc = checkSum_8(buf, len - sizeof(MsgFramCrc_t));
+    pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
+    tcp_server_send_data(&g_TcpServerHandle, buf, len);
+    g_config_status = 1;
+}
+
+#if 0
+static void kt_SetFrontCbias(void *arg)
+{
+    SetFrontCBiasReq_t *pstFrontCBias = NULL;
+
+    if (arg == NULL) {
+        return; 
+    }
+
+    pstFrontCBias = (SetFrontCBiasReq_t *)((uint8_t *)arg + sizeof(MsgFramHdr_t));
+    g_ConfigInfo.f_Cbias.u = DW_HConvert(&pstFrontCBias->uBias.u);
+
+    g_config_status = 1;
+}
+
+static void kt_SetRearVbias(void *arg)
+{
+    SetRearVBiasReq_t *pstRearVBias = NULL;
+
+    if (arg == NULL) {
+        return; 
+    }
+
+    pstRearVBias = (SetRearVBiasReq_t *)((uint8_t *)arg + sizeof(MsgFramHdr_t));
+    g_ConfigInfo.r_Vbias.u = DW_HConvert(&pstRearVBias->uBias.u);
+
+    g_config_status = 1;
+}
+
+static void kt_SetRearCbias(void *arg)
+{
+    SetRearCBiasReq_t *pstRearCBias = NULL;
+
+    if (arg == NULL) {
+        return; 
+    }
+
+    pstRearVBias = (SetRearVBiasReq_t *)((uint8_t *)arg + sizeof(MsgFramHdr_t));
+    g_ConfigInfo.r_Cbias.u = DW_HConvert(&pstRearCBias->uVBias.u);
+
+    g_config_status = 1;
+}
+
+static void kt_SetRearVbias(void *arg)
+{
+    SetRearVBiasReq_t *pstRearVBias = NULL;
+
+    if (arg == NULL) {
+        return; 
+    }
+
+    pstRearVBias = (SetRearVBiasReq_t *)((uint8_t *)arg + sizeof(MsgFramHdr_t));
+    g_ConfigInfo.r_Vbias.u = DW_HConvert(&pstRearVBias->uVBias.u);
+
+    g_config_status = 1;
+}
+#endif
 /**
  * @brief       获取警告信息
  * @param       arg : 指向获取警告信息报文的指针
@@ -347,6 +442,7 @@ static void kt_AlarmData(void *arg)
                 item = (AdcItem_t *)(g_buf + num * 50 * ADC_ITEM_SIZE);
                 memcpy(&pstAlarmRes->stTime, &item->time, sizeof(SystemTime_t));
                 pstAlarmRes->ullTs = QW_HConvert(&item->ts);
+                pstAlarmRes->temp.u = DW_HConvert(&item->temp.u);
                 for (uint8_t index = 0; index < 50; index ++) {
                     item = (AdcItem_t *)(g_buf + (index + num * 50) * ADC_ITEM_SIZE);
                     pstAlarmRes->data[index].f_cur.u = DW_HConvert(&item->data[0].u);
@@ -500,6 +596,7 @@ static void kt_SampleData(void *arg)
                 item = (AdcItem_t *)(g_buf + num * 50 * ADC_ITEM_SIZE);
                 memcpy(&pstSampleRes->stTime, &item->time, sizeof(SystemTime_t));
                 pstSampleRes->ullTs = QW_HConvert(&item->ts);
+                pstSampleRes->temp.u = DW_HConvert(&item->temp.u);
                 for (uint8_t index = 0; index < 50; index ++) {
                     item = (AdcItem_t *)(g_buf + (index + num * 50) * ADC_ITEM_SIZE);
                     pstSampleRes->data[index].f_cur.u = DW_HConvert(&item->data[0].u);
@@ -513,6 +610,7 @@ static void kt_SampleData(void *arg)
                 curr_index += 1; 
             }
         } else {
+            pstSampleRes->temp.f = ds18b20_get_temp();
             for (uint8_t index = 0; index < 20; index ++) {
                 pstSampleRes->ulCurrSequ = DW_HConvert(&curr_index);
                 memcpy(&pstSampleRes->stTime, pstSysTime, sizeof(SystemTime_t));
@@ -520,6 +618,7 @@ static void kt_SampleData(void *arg)
                 pstSampleRes->ullTs = str_ts;
                 pstSampleRes->ullTs = pstSampleRes->ullTs * 1000 + index * 50;
                 pstSampleRes->ullTs = QW_HConvert(&pstSampleRes->ullTs);
+                pstSampleRes->temp.u = DW_HConvert(&pstSampleRes->temp.u);
                 pstMsgCrc->usCrc = checkSum_8(g_send, len - sizeof(MsgFramCrc_t));
                 pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
                 tcp_server_send_data(&g_TcpServerHandle, g_send, len);
@@ -550,7 +649,7 @@ static void kt_SetSysTime(void *arg)
     time.ucYear = sys_time->ucYear;
     time.ucMonth = sys_time->ucMonth;
     time.ucDay = sys_time->ucDay;
-    time.ucHour = (sys_time->ucHour & 0x7F);
+    time.ucHour = (sys_time->ucHour | 0x80);
     time.ucMinute = sys_time->ucMin;
     time.ucSecond = sys_time->ucScd;
 
@@ -582,13 +681,28 @@ void system_init(void)
         g_ConfigInfo.r_Vmax.f = BUS_VOLTAGE_UPPER_LIMIT_V;
         g_ConfigInfo.r_Vmin.f = BUS_VOLTAGE_LOWER_LIMIT_V;
         g_ConfigInfo.flag = DEV_FLAG_FIRST_ON;
+        g_ConfigInfo.r_Cbias0.f = 0.0f;
+        g_ConfigInfo.f_Cbias0.f = 0.0f;
+        g_ConfigInfo.r_Vbias0.f = 0.0f;
+        g_ConfigInfo.f_Vbias0.f = 0.0f;
+        g_ConfigInfo.f_Vgain.f = 1.0f;
+        g_ConfigInfo.f_Cgain.f = 1.0f;
+        g_ConfigInfo.r_Vgain.f = 1.0f;
+        g_ConfigInfo.r_Cgain.f = 1.0f;
+        g_ConfigInfo.cal_flag = 0;
         sys_config_write(&g_ConfigInfo); 
         rtc_time time = {0x00, 0x50, 0x08, 0x02, 0x30, 0x12, 0x25};
         sd2505_set_time(&time);
         gd55b01ge_erase_chip();
-    } else if (g_ConfigInfo.flag == DEV_FLAG_FIRST_ON && (g_ConfigInfo.block_num > 0 && g_ConfigInfo.block_num <= ADC_INDEX_BLOCK_NUM)) {
+    } else if (g_ConfigInfo.flag == DEV_FLAG_FIRST_ON && g_ConfigInfo.cal_flag) {
         g_ConfigInfo.flag = DEV_FLAG_NEXT_ON;
     }
+    APP_PRINTF("g_ConfigInfo.r_Cbias0.f:%lf, g_ConfigInfo.f_Cbias0.f:%lf, g_ConfigInfo.r_Vbias0.f:%lf, g_ConfigInfo.f_Vbias0.f:%lf\r\n",
+                g_ConfigInfo.r_Cbias0.f, g_ConfigInfo.f_Cbias0.f, g_ConfigInfo.r_Vbias0.f, g_ConfigInfo.f_Vbias0.f);
+    APP_PRINTF("g_ConfigInfo.f_Vgain.f:%lf, g_ConfigInfo.f_Cgain.f:%lf, g_ConfigInfo.r_Vgain.f:%lf, g_ConfigInfo.r_Cgain.f:%lf\r\n",       
+                g_ConfigInfo.f_Vgain.f, g_ConfigInfo.f_Cgain.f, g_ConfigInfo.r_Vgain.f, g_ConfigInfo.r_Cgain.f);
+    APP_PRINTF("g_ConfigInfo.flag:%d,  block_num:%d, curr_block:%d, str_time:%lu, end_time:%lu, alarm_num:%d\r\n",       
+                g_ConfigInfo.flag,  g_ConfigInfo.block_num, g_ConfigInfo.curr_block, g_ConfigInfo.str_time, g_ConfigInfo.end_time, g_ConfigInfo.alarm_num);
 }
 
 /**
@@ -610,7 +724,7 @@ void msg_proc_task(void *pvParameters)
 
     TcpServerHandle_t *handle = (TcpServerHandle_t *)pvParameters;
 
-    while (1)
+    for (;;)
     {
         // 从“数据处理的消息队列”接收消息
         if(xQueueReceive(handle->queue, msg, portMAX_DELAY) == pdPASS)
@@ -653,10 +767,11 @@ void msg_send_task(void *pvParameters)
     // if (pvParameters == NULL) {
     //     return;
     // }
-
+    uint8_t tmp_status = 0;
     // TcpServerHandle_t *handle = (TcpServerHandle_t *)pvParameters;
+    TickType_t xLastWakeTime = xTaskGetTickCount(); 
 
-    while (1)
+    for (;;)
     {
         // for (front = que->ucFront; front <= que->ucRear; front++)
         // {
@@ -669,12 +784,21 @@ void msg_send_task(void *pvParameters)
         //     len = HConvert(&pstMsgHdr->usLen);
         //     tcp_server_send_data(handle, msg, len);
         // } 
+
         if (g_config_status) {
             g_config_status = 0;
             sys_config_write(&g_ConfigInfo);
         }
+        if (tmp_status == 0) {
+            ds18b20_start_convert();
+            tmp_status = 1;
+        } else {
+            ds18b20_read_temp();
+            tmp_status = 0;
+        }
 
-        vTaskDelay(pdMS_TO_TICKS(10));  // 降低CPU占用
+        // vTaskDelay(pdMS_TO_TICKS(10));  // 降低CPU占用
+         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
     }
 }
 

@@ -35,13 +35,31 @@
 #define LED_D11_PORT GPIOF
 #define LED_D11_PIN GPIO_PIN_7
 
-#define KEY_K1_RCU RCU_GPIOD
-#define KEY_K1_PORT GPIOD
-#define KEY_K1_PIN GPIO_PIN_14
+//#define KEY_K1_RCU RCU_GPIOD
+//#define KEY_K1_PORT GPIOD
+//#define KEY_K1_PIN GPIO_PIN_14
 
-#define KEY_K2_RCU RCU_GPIOD
-#define KEY_K2_PORT GPIOD
-#define KEY_K2_PIN GPIO_PIN_15
+//#define KEY_K2_RCU RCU_GPIOD
+//#define KEY_K2_PORT GPIOD
+//#define KEY_K2_PIN GPIO_PIN_15
+
+/* cal push-button */
+#define CAL_KEY1_GPIO_PIN              GPIO_PIN_14
+#define CAL_KEY1_GPIO_PORT             GPIOD
+#define CAL_KEY1_GPIO_CLK              RCU_GPIOD
+#define CAL_KEY1_EXTI_LINE             EXTI_14
+#define CAL_KEY1_EXTI_PORT_SOURCE      EXTI_SOURCE_GPIOD
+#define CAL_KEY1_EXTI_PIN_SOURCE       EXTI_SOURCE_PIN14
+#define CAL_KEY1_EXTI_IRQn             EXTI10_15_IRQn
+
+/* cal push-button */
+#define CAL_KEY2_GPIO_PIN              GPIO_PIN_15
+#define CAL_KEY2_GPIO_PORT             GPIOD
+#define CAL_KEY2_GPIO_CLK              RCU_GPIOD
+#define CAL_KEY2_EXTI_LINE             EXTI_15
+#define CAL_KEY2_EXTI_PORT_SOURCE      EXTI_SOURCE_GPIOD
+#define CAL_KEY2_EXTI_PIN_SOURCE       EXTI_SOURCE_PIN15
+#define CAL_KEY2_EXTI_IRQn             EXTI10_15_IRQn  
 
 #define DI_RCU RCU_GPIOE
 #define DI_PORT GPIOE
@@ -62,19 +80,6 @@
 #define DEBUG_AF GPIO_AF_7
 #define DEBUG_UART_TX_PIN GPIO_PIN_5
 #define DEBUG_UART_RX_PIN GPIO_PIN_6
-
-void led_init(void);
-void key_init(void);
-void DI_init(void);
-void relay_init(void);
-void debug_uart_init(void);
-
-
-// #define D5(x)    gpio_bit_write(LED_D5_PORT,LED_D5_PIN, (x?RESET:SET) )
-// #define D6(x)    gpio_bit_write(LED_D6_PORT,LED_D6_PIN, (x?RESET:SET) )
-// #define D9(x)    gpio_bit_write(LED_D9_PORT,LED_D9_PIN, (x?RESET:SET) )
-// #define D10(x)    gpio_bit_write(LED_D10_PORT,LED_D10_PIN,(x?RESET:SET) )
-// #define D11(x)    gpio_bit_write(LED_D11_PORT,LED_D11_PIN, (x?RESET:SET) )
 
 #define D5_LED_TOGLE()     do { \
                                 gpio_bit_toggle(LED_D5_PORT, LED_D5_PIN); \
@@ -138,9 +143,6 @@ void debug_uart_init(void);
                             } while (0)
 
 
-// #define RAY1(x)    gpio_bit_write(RELAY_RAY1_PORT,RELAY_RAY1_PIN, (x?SET:RESET) )
-// #define RAY2(x)    gpio_bit_write(RELAY_RAY2_PORT,RELAY_RAY2_PIN, (x?SET:RESET) )
-
 #define ALARM1_SHORT_CIRCUIT()  do { \
                                     gpio_bit_reset(RELAY_RAY1_PORT,RELAY_RAY1_PIN); \
                                 } while (0)
@@ -158,11 +160,18 @@ void debug_uart_init(void);
                                 } while (0)
                     
                                 
-#define K1_GET()        gpio_input_bit_get(KEY_K1_PORT,KEY_K1_PIN)
-#define K2_GET()        gpio_input_bit_get(KEY_K2_PORT,KEY_K2_PIN)
+// #define CAL_KEY1()        (gpio_input_bit_get(KEY_K1_PORT,KEY_K1_PIN) == RESET ? 0 : 1)
+// #define CAL_KEY2()        (gpio_input_bit_get(KEY_K2_PORT,KEY_K2_PIN) == RESET ? 0 : 1)
 
-// #define DI_GET()        gpio_input_bit_get(DI_PORT,DI_PIN)
 
-#define ALARM_CLEAR_STATUS()     gpio_input_bit_get(DI_PORT,DI_PIN)
+// #define ALARM_CLEAR_STATUS()     gpio_input_bit_get(DI_PORT,DI_PIN)
+
+void cal_Key1_irq_handler_cb(void);
+void cal_Key2_irq_handler_cb(void);
+void led_init(void);
+void key_init(void);
+// void DI_init(void);
+void relay_init(void);
+void debug_uart_init(void);
 
 #endif /* GD32F4XX_Q468V1_H */

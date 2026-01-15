@@ -140,7 +140,7 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
     for (i = 0; i < index; i ++) {
         if (timestamp == item_tables[i].timestamp) {
             #if 0
-            APP_PRINTF("Storage_Read_AdcData, timestamp:%d, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
+            APP_PRINTF("Storage_Read_AdcData, timestamp:%lu, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
             #endif
             emmcreadblocks(data, item_tables[i].addr + block_off, block_num);
             ret = 0;
@@ -155,7 +155,7 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
         for (i = 0; i < index; i++) {
             if (timestamp == item_tables[i].timestamp) {
                 #if 0
-                APP_PRINTF("Storage_Read_AdcData, timestamp:%d, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
+                APP_PRINTF("Storage_Read_AdcData, timestamp:%lu, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
                 #endif
                 emmcreadblocks(data, item_tables[i].addr + block_off, block_num);
                 ret = 0;
@@ -384,6 +384,46 @@ exit:
     return ret;
 }
 
+void Storage_Clear_AlarmData(AlarmObject_t *alarm)
+{
+    if (alarm == NULL) {
+        return ;
+    }
+
+    if (xSemaphoreTake(alarm->mutex, ALARM_LOCK_TIMEOUT) != pdTRUE) {
+        return ; 
+    }
+
+    alarm->addr = ALARM_MSG_START_ADDR;
+    alarm->info_addr = AlARM_INFO_START_ADDR;
+    alarm->index_addr = ALARM_INDEX_START_ADDR;
+    alarm->index_num = 0;
+
+    gd55b01ge_erase_chip();
+    
+    xSemaphoreGive(alarm->mutex);
+}
+
+void Storage_Clear_AdcData(AdcObject_t *adc)
+{
+    if (adc == NULL) {
+        return ;
+    }
+
+    if (xSemaphoreTake(adc->mutex, ADC_LOCK_TIMEOUT) != pdTRUE) {
+        return ;
+    }
+
+    adc->index_addr = ADC_INDEX_START_BLOCK;
+    adc->addr = 0;
+    adc->end_time = 0;
+    adc->str_time = 0;
+    adc->block_num = 0;
+    adc->curr_block = 0;
+
+    xSemaphoreGive(adc->mutex);
+}
+
 uint8_t Adc_Object_Init(AdcObject_t *object)
 {
     if (object == NULL) {
@@ -419,7 +459,7 @@ void storage_task(void *pvParameters)
     uint32_t index = 0;
     uint16_t i = 0;
     
-    while (1)
+    for (;;)
     {
         if (Adc_Cache_Get_Count(&g_AdcItemCache) >= 100) {
             read_len = Adc_Cache_Read_Batch(&g_AdcItemCache, (AdcItem_t *)&g_adc_items[index], 100);
@@ -443,7 +483,7 @@ void storage_task(void *pvParameters)
                 }
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 
@@ -487,7 +527,7 @@ void alarm_task(void *pvParameters)
     int8_t ret = -1;
     uint32_t off = 0;
 
-    while (1)
+    for (;;)
     {
         if(xSemaphoreTake(g_AlarmNotify.alarm_sem, portMAX_DELAY) == pdPASS) {
             while(xQueueReceive(g_AlarmNotify.alarm_queue, &alarm_msg, 0) == pdPASS) {

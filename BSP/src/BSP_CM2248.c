@@ -53,7 +53,7 @@ void cm2248_init(void){
     CM2248_CONVST_B_L;
     cm2248_reset();
 
-    // cm2248_start_conv();
+    cm2248_start_conv();
 }
 
 void cm2248_start_conv(void){
