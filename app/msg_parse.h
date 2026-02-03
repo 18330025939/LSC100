@@ -54,6 +54,9 @@
 #define MSG_SIGN_CLEAR_DATA_REQ     0x1A
 #define MSG_SIGN_CLEAR_DATA_RES     0x8A
 
+#define MSG_SIGN_CLEAR_CONFIG_REQ   0x1B
+#define MSG_SIGN_CLEAR_CONFIG_RES   0x8B
+
 #define MSG_SIGN_ALARM_INFO_REQ     0x20
 #define MSG_SIGN_ALARM_INFO_RES     0x90  
 
@@ -179,7 +182,7 @@ typedef struct
     SystemTime_t stTime;
     uint8_t usStatus;
     uint8_t Rsvd[2];
-} ClearDataRes_t;
+} ClearDataRes_t, ClearConfigRes_t;
 
 //typedef struct
 //{

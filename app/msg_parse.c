@@ -54,20 +54,22 @@ static void kt_SampleInfo(void *arg);
 static void kt_SampleData(void *arg);
 static void kt_SetSysTime(void *arg);
 static void kt_ClearData(void *arg);
+static void kt_ClearConfig(void *arg);
 
 const static MsgPraseInterface_t g_MsgPraseInterTable[] = {
-    {MSG_SIGN_CONFIG_INFO_REQ, kt_ConfigInfo    },
-    {MSG_SIGN_SET_F_VMAX_REQ,  kt_SetFrontVmax  },
-    {MSG_SIGN_SET_F_VMIN_REQ,  kt_SetFrontVmin  }, 
-    {MSG_SIGN_SET_R_VMAX_REQ,  kt_SetRearVmax   },
-    {MSG_SIGN_SET_R_VMIN_REQ,  kt_SetRearVmin   },  
-    {MSG_SIGN_ALARM_INFO_REQ,  kt_AlarmInfo     },
-    {MSG_SIGN_ALARM_DATA_REQ,  kt_AlarmData     },
-    {MSG_SIGN_SAMPLE_INFO_REQ, kt_SampleInfo    },
-    {MSG_SIGN_SAMPLE_DATA_REQ, kt_SampleData    },
-    {MSG_SIGN_SET_TIME_REQ,    kt_SetSysTime    },
-    {MSG_SIGN_CLEAR_DATA_REQ,  kt_ClearData     },
-    {0xFF,                     NULL,            }
+    { MSG_SIGN_CONFIG_INFO_REQ,   kt_ConfigInfo   },
+    { MSG_SIGN_SET_F_VMAX_REQ,    kt_SetFrontVmax },
+    { MSG_SIGN_SET_F_VMIN_REQ,    kt_SetFrontVmin }, 
+    { MSG_SIGN_SET_R_VMAX_REQ,    kt_SetRearVmax  },
+    { MSG_SIGN_SET_R_VMIN_REQ,    kt_SetRearVmin  },  
+    { MSG_SIGN_ALARM_INFO_REQ,    kt_AlarmInfo    },
+    { MSG_SIGN_ALARM_DATA_REQ,    kt_AlarmData    },
+    { MSG_SIGN_SAMPLE_INFO_REQ,   kt_SampleInfo   },
+    { MSG_SIGN_SAMPLE_DATA_REQ,   kt_SampleData   },
+    { MSG_SIGN_SET_TIME_REQ,      kt_SetSysTime   },
+    { MSG_SIGN_CLEAR_DATA_REQ,    kt_ClearData    },
+    { MSG_SIGN_CLEAR_CONFIG_REQ,  kt_ClearConfig  },
+    { 0xFF,                     NULL,             }
 };
 
 void sys_config_write(ConfigInfo_t *config)
@@ -236,6 +238,7 @@ static void kt_ClearData(void *arg)
     g_ConfigInfo.str_time = 0;
     g_ConfigInfo.end_time = 0;
     g_ConfigInfo.alarm_num = 0;
+    g_ConfigInfo.flag = DEV_FLAG_FIRST_ON;
     Storage_Clear_AlarmData(&g_AlarmObject);
     Storage_Clear_AdcData(&g_AdcObject);
 
@@ -248,6 +251,35 @@ static void kt_ClearData(void *arg)
     memcpy(&pstClear->stTime, &g_TimeSync.sys_time, sizeof(SystemTime_t));
     pstClear->usStatus = 1;
     pstMsgCrc = (MsgFramCrc_t*)(buf + sizeof(MsgFramHdr_t) + sizeof(ClearDataRes_t));
+    pstMsgCrc->usCrc = checkSum_8(buf, len - sizeof(MsgFramCrc_t));
+    pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
+    tcp_server_send_data(&g_TcpServerHandle, buf, len);
+    g_config_status = 1;
+}
+
+static void kt_ClearConfig(void *arg)
+{
+    ClearConfigRes_t *pstClear = NULL;
+    uint8_t buf[MAX_QUEUE_DATA_SIZE] = {0};
+    MsgFramHdr_t *pstMsgHdr =NULL;
+    MsgFramCrc_t *pstMsgCrc = NULL;
+    uint16_t len = 0;
+
+    if (arg == NULL) {
+        return; 
+    }
+
+    memset(&g_ConfigInfo, 0, sizeof(ConfigInfo_t));
+
+    pstMsgHdr = (MsgFramHdr_t *)buf;
+    pstMsgHdr->usHdr = MSG_DATA_FRAM_HDR;
+    len = sizeof(MsgFramHdr_t) + sizeof(ClearConfigRes_t) + sizeof(MsgFramCrc_t);
+    pstMsgHdr->usLen = HConvert(&len);
+    pstMsgHdr->ucSign = MSG_SIGN_CLEAR_CONFIG_RES;
+    pstClear = (ClearConfigRes_t *)(buf + sizeof(MsgFramHdr_t));
+    memcpy(&pstClear->stTime, &g_TimeSync.sys_time, sizeof(SystemTime_t));
+    pstClear->usStatus = 1;
+    pstMsgCrc = (MsgFramCrc_t*)(buf + sizeof(MsgFramHdr_t) + sizeof(ClearConfigRes_t));
     pstMsgCrc->usCrc = checkSum_8(buf, len - sizeof(MsgFramCrc_t));
     pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
     tcp_server_send_data(&g_TcpServerHandle, buf, len);
@@ -798,7 +830,7 @@ void msg_send_task(void *pvParameters)
         }
 
         // vTaskDelay(pdMS_TO_TICKS(10));  // 降低CPU占用
-         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
     }
 }
 

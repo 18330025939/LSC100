@@ -14,7 +14,11 @@ static Platform_OneWire_t g_oneWire = {
 
 static DS18B20_Object_t g_ds18b20;
 
-// 私有方法：启动DS18B20温度转换
+/**
+ * @brief  DS18B20启动温度转换
+ * @param  void
+ * @retval true-成功,false-失败
+ */
 bool ds18b20_start_convert(void)
 {
     DS18B20_Object_t *self = (DS18B20_Object_t *)&g_ds18b20; 
@@ -25,17 +29,20 @@ bool ds18b20_start_convert(void)
 
     onewire_reset(self->ow_dev);
     onewire_check(self->ow_dev);
-    
-    // 2. 发送命令：跳过ROM→启动转换
+
     onewire_write_byte(self->ow_dev, DS18B20_CMD_SKIP_ROM);
     onewire_write_byte(self->ow_dev, DS18B20_CMD_CONVERT);
 
     xSemaphoreGive(self->mutexSem);
-    // 3. 温度转换需要时间（最大750ms，此处不阻塞，需外部延时后读数据）
+
     return true;
 }
 
-// 私有方法：读取DS18B20温度
+/**
+ * @brief  DS18B20读取温度
+ * @param  void
+ * @retval true-成功,false-失败
+ */
 bool ds18b20_read_temp(void)
 {
     DS18B20_Object_t *self = (DS18B20_Object_t *)&g_ds18b20; 
@@ -47,19 +54,15 @@ bool ds18b20_read_temp(void)
         return false;
     }
   
-    // 1. 单总线复位
     onewire_reset(self->ow_dev);
     onewire_check(self->ow_dev);
 
-        // 2. 发送命令：跳过ROM→读暂存器
     onewire_write_byte(self->ow_dev, DS18B20_CMD_SKIP_ROM);
     onewire_write_byte(self->ow_dev, DS18B20_CMD_READ_SCR);
     
-    // 3. 读暂存器前2字节（温度低位+高位）
     temp_raw[0] = onewire_read_byte(self->ow_dev); // 温度低位
     temp_raw[1] = onewire_read_byte(self->ow_dev); // 温度高位
 
-    // 4. 数据转换（DS18B20分辨率0.0625℃，16位有符号数）
     if (temp_raw[1] > 7) {
         temp_val = temp_raw[1] << 8 | temp_raw[0];
         temp_val = ~temp_val;
@@ -73,7 +76,11 @@ bool ds18b20_read_temp(void)
     return true;
 }
 
-// 私有方法：获取缓存温度
+/**
+ * @brief  DS18B20读取温度
+ * @param  void
+ * @retval 实际温度数据
+ */
 float ds18b20_get_temp(void)
 {
     DS18B20_Object_t *self = (DS18B20_Object_t *)&g_ds18b20; 
@@ -90,12 +97,15 @@ float ds18b20_get_temp(void)
     return tmp;
 }
 
-// 对外接口：创建DS18B20对象
+/**
+ * @brief  DS18B20初始化
+ * @param  void
+ * @retval void
+ */
 void ds18b20_init(void)
 {
     DS18B20_Object_t *self = (DS18B20_Object_t *)&g_ds18b20; 
 
-    // 初始化DS18B20属性
     self->ow_dev = &g_oneWire;
     self->temp_c = 0.0f;
     self->is_ready = true;

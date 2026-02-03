@@ -2,7 +2,11 @@
 #include <stdio.h>
 #include "systick.h"
 
-// 初始化单总线引脚（开漏输出，无上下拉）
+/**
+ * @brief  单总线初始化
+ * @param  self: 单总线指针
+ * @retval true-成功,false-失败
+ */
 bool onewire_init(Platform_OneWire_t* self)
 {
     if (self == NULL)
@@ -10,34 +14,39 @@ bool onewire_init(Platform_OneWire_t* self)
     
     /* 使能时钟 */
     rcu_periph_clock_enable(self->rcu);
-        /* 配置DQ为输出模式 */
+    /* 配置DQ为输出模式 */
     gpio_mode_set(self->port, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, self->pin);
-        /* 配置为推挽输出 50MHZ */
+    /* 配置为推挽输出 50MHZ */
     gpio_output_options_set(self->port, GPIO_OTYPE_OD, GPIO_OSPEED_50MHZ, self->pin);
 
-    // // 初始化为高电平
-    // gpio_bit_write(self->port, self->pin, SET);
     return true;
 }
 
 
-// 单总线复位（发送复位脉冲，检测从机存在）
+/**
+ * @brief  单总线复位
+ * @param  self: 单总线指针
+ * @retval true-成功,false-失败
+ */
 bool onewire_reset(Platform_OneWire_t* self)
 {
     if (self == NULL)
         return false;
     
-    // 发送复位脉冲（拉低750us）
     gpio_bit_reset(self->port, self->pin);
     Drv_DelayUs(750);
     
-    // 释放总线（拉高）
     gpio_bit_set(self->port, self->pin);
     Drv_DelayUs(15);
     
     return true;
 }
 
+/**
+ * @brief  单总线检测从机是否存在
+ * @param  self: 单总线指针
+ * @retval 0-存在， 1-不存在
+ */
 uint8_t onewire_check(Platform_OneWire_t* self)
 {
     uint8_t retry = 0;
@@ -65,30 +74,35 @@ uint8_t onewire_check(Platform_OneWire_t* self)
     return rval;
 }
 
-// 写1位数据
+/**
+ * @brief  单总线写位数据
+ * @param  self: 单总线指针
+ * @param  bit: 待写位数据
+ * @retval 无
+ */
 static void onewire_write_bit(Platform_OneWire_t* self, uint8_t bit)
 {
     if (self == NULL)
         return;
     
-    // platform_gpio_set_output(self->port, self->pin);
-    // 拉低总线
     gpio_bit_reset(self->port, self->pin);
     Drv_DelayUs(bit ? ONEWIRE_WRITE_1_DELAY : ONEWIRE_WRITE_0_DELAY);
     
-    // 释放总线
     if (bit) {
         gpio_bit_set(self->port, self->pin);
     } else {
         gpio_bit_reset(self->port, self->pin);
     }
-    // gpio_bit_set(self->port, self->pin);
-    // Drv_DelayUs(bit ? ONEWIRE_WRITE_0_DELAY : ONEWIRE_WRITE_1_DELAY);
+
     Drv_DelayUs(ONEWIRE_WRITE_0_DELAY);
     gpio_bit_set(self->port, self->pin);
 }
 
-// 读1位数据
+/**
+ * @brief  单总线读位数据
+ * @param  self: 单总线指针
+ * @retval 读取的位数据
+ */
 static uint8_t onewire_read_bit(Platform_OneWire_t* self)
 {
     if (self == NULL)
@@ -96,15 +110,12 @@ static uint8_t onewire_read_bit(Platform_OneWire_t* self)
     
     uint8_t bit = 0;
     
-    // gpio_mode_set(self->port, GPIO_MODE_OUTPUT,GPIO_PUPD_PULLUP, self->pin);
-    // 拉低总线
     gpio_bit_reset(self->port, self->pin);
     Drv_DelayUs(1);
     
-    // // 释放总线
     gpio_bit_set(self->port, self->pin);
     Drv_DelayUs(2);
-    // 读取总线电平
+
     if (gpio_input_bit_get(self->port, self->pin) == SET) {
         bit = 1;
     }
@@ -114,7 +125,12 @@ static uint8_t onewire_read_bit(Platform_OneWire_t* self)
     return bit;
 }
 
-// 写1字节数据（LSB先行）
+/**
+ * @brief  单总线写字节数据
+ * @param  self: 单总线指针
+ * @param  byte: 待写字节数据
+ * @retval 无
+ */
 void onewire_write_byte(Platform_OneWire_t* self, uint8_t byte)
 {
     uint8_t data = byte;
@@ -125,7 +141,11 @@ void onewire_write_byte(Platform_OneWire_t* self, uint8_t byte)
     }
 }
 
-// 读1字节数据（LSB先行）
+/**
+ * @brief  单总线读字节数据
+ * @param  self: 单总线指针
+ * @retval 读取的字节数据
+ */
 uint8_t onewire_read_byte(Platform_OneWire_t* self)
 {
     uint8_t byte = 0;

@@ -573,7 +573,7 @@ static void cal_bias_zero(Cal_t *cal, AdcItem_t *item)
             cal->num += 1;
         }
         if (cal->num >= 100) {
-            // g_cal_key1_status = 0;
+            g_cal_key1_status = 0;
             g_ConfigInfo.f_Cbias0.f = (0.0f - ((float)(cal->data[SENSOR_FRONT_CURRENT] / 100) / 65535.0f * 10.0f));
             g_ConfigInfo.f_Vbias0.f = (0.0f - ((float)(cal->data[SENSOR_FRONT_VOLTAGE] / 100) / 65535.0f * 10.0f));
             g_ConfigInfo.r_Cbias0.f = (0.0f - ((float)(cal->data[SNESOR_REAR_CURRENT] / 100) / 65535.0f * 10.0f));
@@ -591,7 +591,7 @@ static void cal_bias_full(Cal_t *cal, AdcItem_t *item)
         return;
     }
 
-    if (g_cal_key2_status && g_ConfigInfo.cal_flag == 0 && g_cal_key1_status == 1) {
+    if (g_cal_key2_status && g_ConfigInfo.cal_flag == 0) {
         if (cal->num < 100) { 
             cal->data[SENSOR_FRONT_CURRENT] += item->raw_data[SENSOR_FRONT_CURRENT];
             cal->data[SENSOR_FRONT_VOLTAGE] += item->raw_data[SENSOR_FRONT_VOLTAGE];
@@ -600,7 +600,6 @@ static void cal_bias_full(Cal_t *cal, AdcItem_t *item)
             cal->num += 1;
         }
         if (cal->num >= 100) {
-            g_cal_key1_status = 0;
             g_cal_key2_status = 0;
             g_ConfigInfo.f_Cgain.f = 10.0f / ((float)(cal->data[SENSOR_FRONT_CURRENT] / 100) / 65535.0f * 10.0f + g_ConfigInfo.f_Cbias0.f);
             g_ConfigInfo.f_Vgain.f = 10.0f / ((float)(cal->data[SENSOR_FRONT_VOLTAGE] / 100) / 65535.0f * 10.0f + g_ConfigInfo.f_Vbias0.f);

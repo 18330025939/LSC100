@@ -59,10 +59,6 @@ int main(void)
 	cm2248_init();       // AD芯片初始化
     lwip_stack_init();   // initilaize the LwIP stack
     timer0_init();       // TIME0初始化
-    ds18b20_read_temp();
-    float temp = 0.0f;
-    temp = ds18b20_get_temp();
-    APP_PRINTF("current_temp:%lf\r\n", temp);
     app_task();
 }
 

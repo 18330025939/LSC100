@@ -67,19 +67,13 @@ void EXTI10_15_IRQHandler(void)
 
 void key_init(void)
 {
- 
-    // rcu_periph_clock_enable(KEY_K1_RCU);//使能时钟
     rcu_periph_clock_enable(CAL_KEY1_GPIO_CLK);
-    // rcu_periph_clock_enable(CAL_KEY2_GPIO_CLK);
     rcu_periph_clock_enable(RCU_SYSCFG);
 
     gpio_mode_set(CAL_KEY1_GPIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, CAL_KEY1_GPIO_PIN);
     gpio_mode_set(CAL_KEY2_GPIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, CAL_KEY2_GPIO_PIN);
-    // gpio_mode_set(KEY_K1_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, KEY_K1_PIN);//设置为输入模式
-    // gpio_mode_set(KEY_K2_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, KEY_K2_PIN);
 
     nvic_irq_enable(CAL_KEY1_EXTI_IRQn, 3U, 1U);
-    // nvic_irq_enable(CAL_KEY2_EXTI_IRQn, 1U, 1U);
 
     /* connect key EXTI line to key GPIO pin */
     syscfg_exti_line_config(CAL_KEY1_EXTI_PORT_SOURCE, CAL_KEY1_EXTI_PIN_SOURCE);

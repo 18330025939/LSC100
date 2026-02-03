@@ -1,3 +1,22 @@
+/**
+ ****************************************************************************************************
+ * @file        utils.c
+ * @author      xxxxxx
+ * @version     V1.0
+ * @date        2025-12-31
+ * @brief       公用功能模块
+ ****************************************************************************************************
+ * @attention
+ *
+ * 项目:LSC100
+ *
+ * 修改说明
+ * V1.0 20251231
+ * 第一次发布
+ *
+ ****************************************************************************************************
+ */
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -200,7 +219,7 @@ static const uint8_t days_in_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31
 
 /**
  * @brief 将秒级时间戳转换为年月日时分秒
- * @param timestamp      秒级时间戳（从1970-01-01 00:00:00 UTC开始）
+ * @param timestamp 秒级时间戳（从1970-01-01 00:00:00 UTC开始）
  * @param time  输出参数
  */
 void timestamp_to_datetime(uint32_t timestamp, SystemTime_t *time)
@@ -238,13 +257,21 @@ void timestamp_to_datetime(uint32_t timestamp, SystemTime_t *time)
     time->ucDay = days + 1;  // days从0开始，需要+1
 }
 
-// 私有工具函数：BCD码转十进制（SD2505存储格式为BCD码）
+/**
+ * @brief BCD码数据转十进制数据
+ * @param bcd_val BCD码数据
+ * @param 十进制数据
+ */
 uint8_t bcd_to_dec(uint8_t bcd_val)
 {
     return ((bcd_val >> 4) * 10) + (bcd_val & 0x0F);
 }
 
-// 私有工具函数：十进制转BCD码
+/**
+ * @brief 十进制数据转BCD码数据
+ * @param dec_val 十进制数据
+ * @param BCD码数据
+ */
 uint8_t dec_to_bcd(uint8_t dec_val)
 {
     return (((dec_val / 10) & 0x0F) << 4) | (dec_val % 10);

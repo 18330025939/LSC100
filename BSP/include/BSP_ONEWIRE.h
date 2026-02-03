@@ -24,12 +24,8 @@ typedef struct {
 
 bool onewire_reset(Platform_OneWire_t* self);
 uint8_t onewire_check(Platform_OneWire_t* self);
-// 写1字节数据（LSB先行）
 void onewire_write_byte(Platform_OneWire_t* self, uint8_t byte);
-
-// 读1字节数据（LSB先行）
 uint8_t onewire_read_byte(Platform_OneWire_t* self);
-
 bool onewire_init(Platform_OneWire_t* self);
 
 #endif /* __BSP_ONEWIRE_H */

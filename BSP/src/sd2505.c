@@ -3,15 +3,15 @@
  * @file        sd2505.c
  * @author      xxxxxx
  * @version     V1.0
- * @date        2024-12-12
+ * @date        2025-12-31
  * @brief       sd2505 驱动代码  
  ****************************************************************************************************
  * @attention
  *
- * 项目:L2407092
+ * 项目:LSC100
  *
  * 修改说明
- * V1.0 20241212
+ * V1.0 20251231
  * 第一次发布
  * 
  ****************************************************************************************************
@@ -49,7 +49,6 @@ void sd2505_init(void)
     uint8_t bCnt = 3;
     uint8_t bValue = 0;
     uint8_t bRValue = 0;
-    // rtc_time time = {0x00, 0x42, 0x16, 0x05, 0x19, 0x12, 0x25};
 
     I2C_Driver_Init(&g_sd2505_Handle);
     delay_ms(20);
@@ -67,11 +66,6 @@ void sd2505_init(void)
         }
        delay_ms(10);
     }
-    // sd2505_set_time(&time);
-//    delay_ms(10);
-//    sd2505_get_time(&time1);
-//    printf("timer year %x moth %x week %x day %x hour %x min %x sec %x\r\n", time1.ucYear, time1.ucMonth, time1.ucWeek, time1.ucDay,
-//                                                                         time1.ucHour, time1.ucMinute, time1.ucSecond);
 }
 
 /**
