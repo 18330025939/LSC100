@@ -174,6 +174,9 @@ void ENET_IRQHandler(void)
 {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
  
+    if(SET == enet_interrupt_flag_get(ENET_DMA_INT_FLAG_TS)) {
+        enet_interrupt_flag_clear(ENET_DMA_INT_FLAG_TS_CLR);
+    }
     /* frame received */
     if(SET == enet_interrupt_flag_get(ENET_DMA_INT_FLAG_RS)) {
         /* give the semaphore to wakeup LwIP task */

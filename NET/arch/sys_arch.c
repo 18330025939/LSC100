@@ -39,7 +39,7 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
-#include "udp_echo.h"
+#include "bsp_eth.h"
 
 #include "lwip/memp.h"
 #include "lwip/dhcp.h"

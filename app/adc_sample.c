@@ -13,6 +13,8 @@
  * 修改说明
  * V1.0 20251231
  * 第一次发布
+ * V1.1 20260206
+ * 修改采样数据报警逻辑
  *
  ****************************************************************************************************
  */
@@ -297,6 +299,44 @@ uint64_t TimeSync_Get_Absolute_Time(uint64_t curr_tick, SystemTime_t *time)
 }
 
 /**
+ * @brief 同步时间初始化（适配秒级RTC）
+ */
+void time_sync_init(TimeSync_t *time_sync)
+{
+    rtc_time time;
+
+    memset(time_sync, 0 , sizeof(TimeSync_t));
+    time_sync->mutex = xSemaphoreCreateMutex();
+    if (time_sync->mutex == NULL) {
+        return;
+    }
+
+    sd2505_get_time(&time);
+
+    time_sync->sys_time.ucYear = time.ucYear;
+    time_sync->sys_time.ucMonth = time.ucMonth;
+    time_sync->sys_time.ucDay = time.ucDay;
+    time_sync->sys_time.ucHour = time.ucHour & 0x7F;
+    time_sync->sys_time.ucMin = time.ucMinute;
+    time_sync->sys_time.ucScd = time.ucSecond;
+
+    time_sync->rtc_base_sec = datetime_to_timestamp(bcd_to_dec(time_sync->sys_time.ucYear) + 2000,
+                                                    bcd_to_dec(time_sync->sys_time.ucMonth),
+                                                    bcd_to_dec(time_sync->sys_time.ucDay),
+                                                    bcd_to_dec(time_sync->sys_time.ucHour),
+                                                    bcd_to_dec(time_sync->sys_time.ucMin),
+                                                    bcd_to_dec(time_sync->sys_time.ucScd));
+                                                
+    #if 0
+    APP_PRINTF("time_sync_task, time:%x-%x-%x %x:%x:%x, g_TimeSync.rtc_base_sec:%lu, g_TimeSync.tick_base:%lu\r\n", 
+                                time_sync->sys_time.ucYear, time_sync->sys_time.ucMonth, time_sync->sys_time.ucDay,
+                                time_sync->sys_time.ucHour, time_sync->sys_time.ucMin, time_sync->sys_time.ucScd,
+                                time_sync->rtc_base_sec, time_sync->tick_base);
+    #endif
+}
+
+
+/**
  * @brief  时间同步任务（适配秒级RTC）
  */
 void time_sync_task(void *pvParameters)
@@ -304,12 +344,6 @@ void time_sync_task(void *pvParameters)
     rtc_time time;
     //uint64_t tick = 0;
     TickType_t xLastWakeTime = xTaskGetTickCount(); 
-    
-    memset(&g_TimeSync, 0 , sizeof(TimeSync_t));
-    g_TimeSync.mutex = xSemaphoreCreateMutex();
-    if (g_TimeSync.mutex == NULL) {
-        return;
-    }
 
     for (;;) {
         if(xSemaphoreTake(g_TimeSync.mutex, pdMS_TO_TICKS(10)) == pdPASS) {
@@ -343,7 +377,7 @@ void time_sync_task(void *pvParameters)
         #endif
         RUN_LED_TOGLE();
 
-        if (g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE && g_TimeSync.rtc_base_sec > (g_AlarmNotify.alarm_ts + 3)) {
+        if (g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE && g_TimeSync.rtc_base_sec > (g_AlarmNotify.alarm_ts + g_AlarmNotify.index)) {
             Adc_Save_Alarm();
         }
 
@@ -402,6 +436,11 @@ uint8_t Alarm_Notify_Init(AlarmNotify_t *notify)
         return 1;
     }
 
+    notify->type = BUS_ALARM_NONE;
+    notify->alarm_sta = ALARM_STA_CLEARED;
+    notify->save_sta = ALARM_STA_END_SAVE;
+    notify->index = 0;
+
     return 0;
 }
 
@@ -413,7 +452,7 @@ uint8_t Alarm_Notify_Init(AlarmNotify_t *notify)
  */
 static void Adc_Check_Alarm(AdcItem_t *item)
 {
-    uint8_t flag = 0;
+    // uint8_t flag = 0;
     AlarmMsg_t alarm_msg = {0};
     float r_v = 0.0f;
     float f_v = 0.0f;
@@ -422,22 +461,35 @@ static void Adc_Check_Alarm(AdcItem_t *item)
         f_v = CALC_BUS_CURRENT_LOW_THRESHOLD(item->data[SENSOR_FRONT_VOLTAGE].f, g_ConfigInfo.f_Vmin.f);
         f_v = CALC_BUS_CURRENT_UP_THRESHOLD(f_v, g_ConfigInfo.f_Vmax.f);
         if (item->data[SENSOR_FRONT_CURRENT].f > f_v) { 
-            flag |= 1 << 0;
+            alarm_msg.type |= BUS_ALARM_FRONT_VOL;
         }
     }
     if (item->data[SNESOR_REAR_CURRENT].f > BUS_CURRENT_IDLE_THRESHOLD) {
         r_v = CALC_BUS_CURRENT_LOW_THRESHOLD(item->data[SNESOR_REAR_VOLTAGE].f, g_ConfigInfo.r_Vmin.f);
         r_v = CALC_BUS_CURRENT_UP_THRESHOLD(r_v, g_ConfigInfo.r_Vmax.f);
         if (item->data[SNESOR_REAR_CURRENT].f > r_v) {
-            flag |= 1 << 1;
+            alarm_msg.type |= BUS_ALARM_REAR_VOL;
         }
     }
-    if (flag) {
+    if (alarm_msg.type) {
         if (xSemaphoreTake(g_AlarmNotify.mutex, pdMS_TO_TICKS(10)) != pdPASS) {
             return ; 
-        }   
-        alarm_msg.type = flag == 1 ? BUS_ALARM_FRONT_VOL : (flag == 2 ? BUS_ALARM_REAR_VOL : BUS_ALARM_FRONT_REAR_VOL);
+        }  
+        
+        if (g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
+            xSemaphoreGive(g_AlarmNotify.mutex);
+            return ;
+        }
+        // alarm_msg.type = flag == 1 ? BUS_ALARM_FRONT_VOL : (flag == 2 ? BUS_ALARM_REAR_VOL : BUS_ALARM_FRONT_REAR_VOL);
         if (alarm_msg.type == g_AlarmNotify.type) {
+            g_AlarmNotify.num += 1;
+            if (g_AlarmNotify.num < 5) {
+                xSemaphoreGive(g_AlarmNotify.mutex);
+                return;
+            }
+        } else {
+            g_AlarmNotify.num = 0;
+            g_AlarmNotify.type = alarm_msg.type;
             xSemaphoreGive(g_AlarmNotify.mutex);
             return;
         }
@@ -447,9 +499,10 @@ static void Adc_Check_Alarm(AdcItem_t *item)
 
         g_AlarmNotify.alarm_sta = ALARM_STA_RAISED;
         g_AlarmNotify.save_sta = ALARM_STA_STR_SAVE;
-        g_AlarmNotify.type = alarm_msg.type;
+        // g_AlarmNotify.type = alarm_msg.type;
         g_AlarmNotify.alarm_ts = alarm_msg.ts - 1;
         g_AlarmNotify.index = 0;
+        // g_AlarmNotify.num = 0;
         #if 0
         APP_PRINTF("item->ts:%llu, alarm_msg.ts:%lu, g_AlarmNotify.alarm_ts:%lu, flag:%d\r\n", item->ts, alarm_msg.ts, g_AlarmNotify.alarm_ts, flag);
         #endif
@@ -503,7 +556,14 @@ static void Adc_Save_Alarm(void)
     if (xSemaphoreTake(g_AlarmNotify.mutex, pdMS_TO_TICKS(10)) != pdPASS) {
         return ; 
     }  
-    
+
+    if (g_AlarmNotify.index >= 3 && g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
+        g_AlarmNotify.save_sta = ALARM_STA_END_SAVE;
+        g_AlarmNotify.index = 0;
+        xSemaphoreGive(g_AlarmNotify.mutex);
+        return;
+    }
+
     alarm_msg.type = BUS_ALARM_SAVE;
     alarm_msg.ts = g_AlarmNotify.alarm_ts + g_AlarmNotify.index;
     #if 0
@@ -515,10 +575,10 @@ static void Adc_Save_Alarm(void)
         return;
     }
 
-    g_AlarmNotify.index += 1;
-    if (g_AlarmNotify.index >= 3 && g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
-        g_AlarmNotify.save_sta = ALARM_STA_END_SAVE;
-    }
+    // g_AlarmNotify.index += 1;
+    // if (g_AlarmNotify.index >= 3 && g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
+    //     g_AlarmNotify.save_sta = ALARM_STA_END_SAVE;
+    // }
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xSemaphoreGiveFromISR(g_AlarmNotify.alarm_sem, &xHigherPriorityTaskWoken);
 
@@ -527,22 +587,42 @@ static void Adc_Save_Alarm(void)
 
 static void ma_init(Ma_t *ma)
 {
-    uint32_t data[4] = {0};
-    uint16_t raw_adc = 0;
+    FloatUInt32_t data[4] = {0};
+    uint16_t raw_adc[4] = {0};
+    AdcItem_t item;
+    uint8_t i = 0;
+    uint8_t index = 0;
 
-    for (uint8_t i = 1; i <= 5; i++) {
+    if (g_ConfigInfo.cal_flag != DEV_CAL_END && g_ConfigInfo.flag != DEV_FLAG_NEXT_ON) {
+        return ;
+    }
+
+    for (i = 1; i <= 10; i++) {
         for (uint8_t index = 0; index < ADC_SAMPLE_CHANNEL; index++) {
-            raw_adc = cm2248_start_read_data();
-            data[index] += raw_adc;
+            cm2248_start_read_data();
         }
+        cm2248_start_conv();
+        delay_us(2 * 1000);
+    }  
+
+    for (i = 1; i <= 10; i++) {
+        for (index = 0; index < ADC_SAMPLE_CHANNEL; index++) {
+            // raw_adc = cm2248_start_read_data();
+            cm2248_read_both_channels(&item.raw_data[index], &raw_adc[index]);
+            data[index].u += item.raw_data[index];
+        }
+        data[SENSOR_FRONT_CURRENT].f += ((float)item.raw_data[SENSOR_FRONT_CURRENT] - g_ConfigInfo.f_Cbias0.f);
+        data[SENSOR_FRONT_VOLTAGE].f += ((float)item.raw_data[SENSOR_FRONT_VOLTAGE] - g_ConfigInfo.f_Vbias0.f);
+        data[SNESOR_REAR_CURRENT].f += ((float)item.raw_data[SNESOR_REAR_CURRENT] - g_ConfigInfo.r_Cbias0.f);
+        data[SNESOR_REAR_VOLTAGE].f += ((float)item.raw_data[SNESOR_REAR_VOLTAGE] - g_ConfigInfo.r_Vbias0.f);
         cm2248_start_conv();
         delay_us(2 * 1000);
     }
 
-    ma->adc_data[SENSOR_FRONT_CURRENT].f = ((float)(data[SENSOR_FRONT_CURRENT] / 5) / 65535.0f * 10.0f);
-    ma->adc_data[SENSOR_FRONT_VOLTAGE].f = ((float)(data[SENSOR_FRONT_VOLTAGE] / 5) / 65535.0f * 10.0f);
-    ma->adc_data[SNESOR_REAR_CURRENT].f = ((float)(data[SNESOR_REAR_CURRENT] / 5) / 65535.0f * 10.0f);
-    ma->adc_data[SNESOR_REAR_VOLTAGE].f = ((float)(data[SNESOR_REAR_VOLTAGE] / 5) / 65535.0f * 10.0f);
+    ma->adc_data[SENSOR_FRONT_CURRENT].f = (data[SENSOR_FRONT_CURRENT].f / 10.0f) * g_ConfigInfo.f_Cgain.f;
+    ma->adc_data[SENSOR_FRONT_VOLTAGE].f = (data[SENSOR_FRONT_VOLTAGE].f / 10.0f) * g_ConfigInfo.f_Vgain.f;
+    ma->adc_data[SNESOR_REAR_CURRENT].f = (data[SNESOR_REAR_CURRENT].f / 10.0f) * g_ConfigInfo.r_Cgain.f;
+    ma->adc_data[SNESOR_REAR_VOLTAGE].f = (data[SNESOR_REAR_VOLTAGE].f / 10.0f) * g_ConfigInfo.r_Vgain.f;
     APP_PRINTF("f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", ma->adc_data[SENSOR_FRONT_CURRENT].f,  ma->adc_data[SENSOR_FRONT_VOLTAGE].f, ma->adc_data[SNESOR_REAR_CURRENT].f, ma->adc_data[SNESOR_REAR_VOLTAGE].f);
     ma->len = 1000;
 }
@@ -550,6 +630,10 @@ static void ma_init(Ma_t *ma)
 static float ma_update(Ma_t *ma, float data, uint8_t index)
 {
     if (ma == NULL) {
+        return data;
+    }
+    
+    if (g_ConfigInfo.cal_flag != DEV_CAL_END && g_ConfigInfo.flag != DEV_FLAG_NEXT_ON) {
         return data;
     }
 
@@ -564,7 +648,7 @@ static void cal_bias_zero(Cal_t *cal, AdcItem_t *item)
         return;
     }
 
-    if (g_cal_key1_status && g_ConfigInfo.cal_flag == 0) {
+    if (g_cal_key1_status && g_ConfigInfo.cal_flag == DEV_CAL_DEF) {
         if (cal->num < 100) { 
             cal->data[SENSOR_FRONT_CURRENT] += item->raw_data[SENSOR_FRONT_CURRENT];//sensor_data;
             cal->data[SENSOR_FRONT_VOLTAGE] += item->raw_data[SENSOR_FRONT_VOLTAGE];//sensor_data;
@@ -574,10 +658,11 @@ static void cal_bias_zero(Cal_t *cal, AdcItem_t *item)
         }
         if (cal->num >= 100) {
             g_cal_key1_status = 0;
-            g_ConfigInfo.f_Cbias0.f = (0.0f - ((float)(cal->data[SENSOR_FRONT_CURRENT] / 100) / 65535.0f * 10.0f));
-            g_ConfigInfo.f_Vbias0.f = (0.0f - ((float)(cal->data[SENSOR_FRONT_VOLTAGE] / 100) / 65535.0f * 10.0f));
-            g_ConfigInfo.r_Cbias0.f = (0.0f - ((float)(cal->data[SNESOR_REAR_CURRENT] / 100) / 65535.0f * 10.0f));
-            g_ConfigInfo.r_Vbias0.f = (0.0f - ((float)(cal->data[SNESOR_REAR_VOLTAGE] / 100) / 65535.0f * 10.0f));
+            g_ConfigInfo.f_Cbias0.f = ((float)cal->data[SENSOR_FRONT_CURRENT] / 100.0f);// / 65535.0f * 10.0f));
+            g_ConfigInfo.f_Vbias0.f = ((float)cal->data[SENSOR_FRONT_VOLTAGE] / 100.0f);// / 65535.0f * 10.0f));
+            g_ConfigInfo.r_Cbias0.f = ((float)cal->data[SNESOR_REAR_CURRENT] / 100.0f);// / 65535.0f * 10.0f));
+            g_ConfigInfo.r_Vbias0.f = ((float)cal->data[SNESOR_REAR_VOLTAGE] / 100.0f);// / 65535.0f * 10.0f));
+            g_ConfigInfo.cal_flag = DEV_CAL_STR;
             cal->num = 0;
             memset((uint8_t*)&cal->data[0], 0, sizeof(cal->data));
             D5_LED_ON();
@@ -591,7 +676,7 @@ static void cal_bias_full(Cal_t *cal, AdcItem_t *item)
         return;
     }
 
-    if (g_cal_key2_status && g_ConfigInfo.cal_flag == 0) {
+    if (g_cal_key2_status && g_ConfigInfo.cal_flag == DEV_CAL_STR) {
         if (cal->num < 100) { 
             cal->data[SENSOR_FRONT_CURRENT] += item->raw_data[SENSOR_FRONT_CURRENT];
             cal->data[SENSOR_FRONT_VOLTAGE] += item->raw_data[SENSOR_FRONT_VOLTAGE];
@@ -601,11 +686,11 @@ static void cal_bias_full(Cal_t *cal, AdcItem_t *item)
         }
         if (cal->num >= 100) {
             g_cal_key2_status = 0;
-            g_ConfigInfo.f_Cgain.f = 10.0f / ((float)(cal->data[SENSOR_FRONT_CURRENT] / 100) / 65535.0f * 10.0f + g_ConfigInfo.f_Cbias0.f);
-            g_ConfigInfo.f_Vgain.f = 10.0f / ((float)(cal->data[SENSOR_FRONT_VOLTAGE] / 100) / 65535.0f * 10.0f + g_ConfigInfo.f_Vbias0.f);
-            g_ConfigInfo.r_Cgain.f = 10.0f / ((float)(cal->data[SNESOR_REAR_CURRENT] / 100) / 65535.0f * 10.0f + g_ConfigInfo.r_Cbias0.f);
-            g_ConfigInfo.r_Vgain.f = 10.0f / ((float)(cal->data[SNESOR_REAR_VOLTAGE] / 100) / 65535.0f * 10.0f + g_ConfigInfo.r_Vbias0.f);
-            g_ConfigInfo.cal_flag = 1;
+            g_ConfigInfo.f_Cgain.f = 10.0f / ((float)cal->data[SENSOR_FRONT_CURRENT] / 100.0f - g_ConfigInfo.f_Cbias0.f);
+            g_ConfigInfo.f_Vgain.f = 10.0f / ((float)cal->data[SENSOR_FRONT_VOLTAGE] / 100.0f - g_ConfigInfo.f_Vbias0.f);
+            g_ConfigInfo.r_Cgain.f = 10.0f / ((float)cal->data[SNESOR_REAR_CURRENT] / 100.0f - g_ConfigInfo.r_Cbias0.f);
+            g_ConfigInfo.r_Vgain.f = 10.0f / ((float)cal->data[SNESOR_REAR_VOLTAGE] / 100.0f - g_ConfigInfo.r_Vbias0.f);
+            g_ConfigInfo.cal_flag = DEV_CAL_END;
             g_config_status = 1;
             cal->num = 0;
             memset((uint8_t*)&cal->data[0], 0, sizeof(cal->data));
@@ -625,6 +710,8 @@ void sample_task(void *pvParameters)
     float sensor_data = 0.0f;
     uint16_t raw_adc[4] = {0};
 
+    item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
+    item.temp.f = ds18b20_get_temp();
     timer0_start();
     
     for (;;)
@@ -645,39 +732,50 @@ void sample_task(void *pvParameters)
             } else {
                 item.ts += 1;
             }
+            
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i ++) {
-                sensor_data = ((float)item.raw_data[i] / 65535.0f) * 10.0f;
+                // sensor_data = ((float)item.raw_data[i] / 65535.0f) * 10.0f;
+                sensor_data = (float)item.raw_data[i];
                 if (i % 2 == 0) {
                     if (i == 0) { 
-                        sensor_data = (sensor_data + g_ConfigInfo.f_Cbias0.f) * g_ConfigInfo.f_Cgain.f;
+                        sensor_data = (sensor_data - g_ConfigInfo.f_Cbias0.f) < 0.0f ? 0.0f : (sensor_data - g_ConfigInfo.f_Cbias0.f);
+                        sensor_data = sensor_data * g_ConfigInfo.f_Cgain.f;
                     } else {
-                        sensor_data = (sensor_data + g_ConfigInfo.r_Cbias0.f) * g_ConfigInfo.r_Cgain.f;
+                        sensor_data = (sensor_data - g_ConfigInfo.r_Cbias0.f) < 0.0f ? 0.0f : (sensor_data - g_ConfigInfo.r_Cbias0.f);
+                        sensor_data = sensor_data * g_ConfigInfo.r_Cgain.f;
                     }
+                    sensor_data = sensor_data > 10.0f ? 10.0f : sensor_data;
                     sensor_data = ma_update(&g_ma, sensor_data, i);
                     item.data[i].f = CONVERT_SENSOR_TO_BUS_CURRENT(sensor_data);
                 } else {
                     if (i == 1) { 
-                        sensor_data = (sensor_data + g_ConfigInfo.f_Vbias0.f) * g_ConfigInfo.f_Vgain.f;
+                        sensor_data = (sensor_data - g_ConfigInfo.f_Vbias0.f) < 0.0f ? 0.0f : (sensor_data - g_ConfigInfo.f_Vbias0.f);
+                        sensor_data = sensor_data * g_ConfigInfo.f_Vgain.f;
                     } else {
-                        sensor_data = (sensor_data + g_ConfigInfo.r_Vbias0.f) * g_ConfigInfo.r_Vgain.f;
+                        sensor_data = (sensor_data - g_ConfigInfo.r_Vbias0.f) < 0.0f ? 0.0f : (sensor_data - g_ConfigInfo.r_Vbias0.f);
+                        sensor_data = sensor_data * g_ConfigInfo.r_Vgain.f;
                     }
+                    sensor_data = sensor_data > 10.0f ? 10.0f : sensor_data;
                     sensor_data = ma_update(&g_ma, sensor_data, i);
                     item.data[i].f = CONVERT_SENSOR_TO_BUS_VOLTAGE(sensor_data);
                 }
             }
-            cal_bias_zero(&g_cal, &item);
-            cal_bias_full(&g_cal, &item);
-            if (g_ConfigInfo.cal_flag && g_ConfigInfo.flag == DEV_FLAG_NEXT_ON) {
+
+            if (g_ConfigInfo.cal_flag == DEV_CAL_END && g_ConfigInfo.flag == DEV_FLAG_NEXT_ON) {
                 Adc_Clear_Alarm(raw_adc[0]);
                 if (item.data[SENSOR_FRONT_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SENSOR_FRONT_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD &&
                     item.data[SNESOR_REAR_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SNESOR_REAR_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD) {
                     continue;
                 }
                 #if 0
+                APP_PRINTF("sample_task, time:%x-%x-%x %x:%x:%x, ts:%lu\r\n", item.time.ucYear, item.time.ucMonth, item.time.ucDay, item.time.ucHour, item.time.ucMin, item.time.ucScd, item.ts);
                 APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf, item.ts:%lu\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f, item.ts);
                 #endif
                 Adc_Cache_Write_One((AdcItemCache_t *)&g_AdcItemCache, (const AdcItem_t *)&item);
                 Adc_Check_Alarm(&item);
+            } else {
+                cal_bias_zero(&g_cal, &item);
+                cal_bias_full(&g_cal, &item);
             }
         }
     }
@@ -690,6 +788,10 @@ void adc_sample_start(void)
     Adc_Cache_Init(&g_AdcItemCache);
 
     ma_init(&g_ma);
+    
+    time_sync_init(&g_TimeSync);
+    
+    ds18b20_read_temp();
     
     xTaskCreate((TaskFunction_t)time_sync_task,             // 任务函数
                 (const char*   )"time_sync_task",           // 任务名称

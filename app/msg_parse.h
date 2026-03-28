@@ -68,6 +68,7 @@
 
 #define MSG_SIGN_SAMPLE_DATA_REQ    0x31
 #define MSG_SIGN_SAMPLE_DATA_RES    0xA1
+#define MSG_SIGN_SAMPLE_DATA_INREQ  0x32
 
 // #define MSG_SIGN_UPGRADE_HANDSHAKE        0x50
 // #define MSG_SIGN_UPGRADE_HANDSHAKE_RESP   0x51
@@ -88,6 +89,13 @@
 #define DEV_FLAG_FIRST_ON   0x5A
 #define DEV_FLAG_NEXT_ON    0xA5
 extern volatile uint8_t g_config_status;
+
+typedef enum 
+{
+    DEV_CAL_DEF = 0,
+    DEV_CAL_STR,
+    DEV_CAL_END
+} DevCalFlag;
 #pragma pack(1)
 typedef struct 
 {
@@ -110,7 +118,7 @@ typedef struct
     FloatUInt32_t f_Cgain;
     FloatUInt32_t r_Vgain;
     FloatUInt32_t r_Cgain;
-    uint8_t cal_flag;
+    DevCalFlag cal_flag;
 
     #if 0
     uint16_t page_num;
@@ -182,7 +190,7 @@ typedef struct
     SystemTime_t stTime;
     uint8_t usStatus;
     uint8_t Rsvd[2];
-} ClearDataRes_t, ClearConfigRes_t;
+} ClearDataRes_t, ClearConfigRes_t, SetTimeRes_t;
 
 //typedef struct
 //{
@@ -276,6 +284,20 @@ typedef struct
     SampleData_t data[50];
     uint8_t usRsvd[15];
 } SampleDataRes_t;
+
+typedef struct
+{
+    uint32_t ulTotalPack;
+    uint32_t ulCurrSequ;
+    uint32_t ulStrTs;
+    uint32_t ulEndTs;
+    uint8_t usRsvd[9];
+    // SystemTime_t stTime;
+    // uint64_t ullTs;
+    // FloatUInt32_t temp;
+    // SampleData_t data[50];
+    // uint8_t usRsvd[15];
+} SampleDataInRes_t;
 #endif
 
 typedef struct

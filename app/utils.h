@@ -13,8 +13,8 @@
 #define TRUE 1
 #endif
 
-#define MAX_QUEUE_SIZE  10
-#define MAX_QUEUE_DATA_SIZE  128
+#define MAX_QUEUE_SIZE  80
+#define MAX_QUEUE_DATA_SIZE  100
 typedef struct
 {
     uint8_t ucFront;
@@ -31,7 +31,7 @@ typedef struct
     uint8_t ucHour;
     uint8_t ucMin;
     uint8_t ucScd;
-} __attribute__((packed)) SystemTime_t;
+} SystemTime_t;//__attribute__((packed)) SystemTime_t;
 
 typedef union
 {

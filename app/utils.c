@@ -91,7 +91,10 @@ static uint8_t isQueueEmpty(ThreadSafeCirQue *q)
  */
 uint8_t enQueue(ThreadSafeCirQue *q, uint8_t *buf, uint16_t len)
 {
-    xSemaphoreTake(q->mutex, portMAX_DELAY);
+    if (xSemaphoreTake(q->mutex, pdMS_TO_TICKS(10)) != pdPASS) {
+        return FALSE;
+    }
+
     if (TRUE == isQueueFull(q))
     {
         xSemaphoreGive(q->mutex);
@@ -115,7 +118,10 @@ uint8_t enQueue(ThreadSafeCirQue *q, uint8_t *buf, uint16_t len)
  */
 uint8_t deQueue(ThreadSafeCirQue *q, uint8_t *buf)
 {
-    xSemaphoreTake(q->mutex, portMAX_DELAY);
+    if (xSemaphoreTake(q->mutex, pdMS_TO_TICKS(10)) != pdPASS) {
+        return FALSE;
+    }
+    
     if (TRUE == isQueueEmpty(q))
     {
         xSemaphoreGive(q->mutex);

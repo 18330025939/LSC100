@@ -42,18 +42,16 @@ static __IO uint32_t enet_init_status = 0;
 static void enet_gpio_config(void);
 static void enet_mac_dma_config(void);
 
-// static void phy_delay_us(uint32_t count)
-// {
-//     volatile uint32_t i, j;
-//     for (i = 0; i < count; i++) {
+ static void phy_delay_us(uint32_t count)
+ {
+     volatile uint32_t i, j;
+     for (i = 0; i < count; i++) {
 
-//         for (j = 0; j < 40; j++) {  
-//             __NOP();
-//         }
-//     }
-// }
-
-#define phy_delay_us(us) delay_us_nop(us)
+         for (j = 0; j < 40; j++) {  
+             __NOP();
+         }
+     }
+ }
 
 void phy_rst(void)
 {

@@ -1,9 +1,12 @@
 #include "SEGGER_RTT.h"
 #include "stdio.h"
 
+#if 1
 #define RTT_LOG_BUF_SIZE 256
 static char rrt_log_buf[RTT_LOG_BUF_SIZE] = {0};
+#endif
 
+#if 0
 int rtt_log(const char *fmt,...)
 {
     int n;
@@ -22,7 +25,7 @@ int rtt_log(const char *fmt,...)
     va_end(args);
     return n;
 }
-
+#endif
 
 int APP_PRINTF(const char *fmt,...)
 {

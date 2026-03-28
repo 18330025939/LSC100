@@ -10,10 +10,16 @@
 #define DS18B20_LOCK_TIMEOUT         pdMS_TO_TICKS(10) // 互斥锁超时（50ms）
 
 // DS18B20命令定义（设备特有）
-#define DS18B20_CMD_RESET     0x00 // 复位命令（实际为时序，无字节命令）
-#define DS18B20_CMD_SKIP_ROM  0xCC // 跳过ROM命令
-#define DS18B20_CMD_CONVERT   0x44 // 温度转换命令
-#define DS18B20_CMD_READ_SCR  0xBE // 读暂存器命令
+#define DS18B20_CMD_RESET     0x00  // 复位命令（实际为时序，无字节命令）
+#define DS18B20_CMD_SKIP_ROM  0xCC  // 跳过ROM命令
+#define DS18B20_CMD_CONVERT   0x44  // 温度转换命令
+#define DS18B20_CMD_READ_SCR  0xBE  // 读暂存器命令
+#define DS18B20_CMD_WRITE_SCR 0x4E  // 写暂存器命令
+
+#define DS18B20_RESOLUTION_9  9
+#define DS18B20_RESOLUTION_10 10
+#define DS18B20_RESOLUTION_11 11
+#define DS18B20_RESOLUTION_12 12
 
 #define DS18B20_GPIO_RCU      RCU_GPIOB
 #define DS18B20_GPIO_PORT     GPIOB
@@ -21,10 +27,9 @@
 
 // DS18B20设备对象结构体
 typedef struct {
-    // 属性：单总线GPIO+温度缓存
-    Platform_OneWire_t *ow_dev; // 单总线绑定的GPIO（需支持输入/输出切换）
-    float temp_c;                // 缓存当前温度（℃）
-    SemaphoreHandle_t mutexSem;       // RTOS 互斥信号量（避免多任务冲突）
+    Platform_OneWire_t *ow_dev;    // 单总线绑定的GPIO（需支持输入/输出切换）
+    float temp_c;                  // 缓存当前温度（℃）
+    SemaphoreHandle_t mutexSem;    // RTOS 互斥信号量（避免多任务冲突）
     bool is_ready;
     
     // // 方法指针：统一接口

@@ -44,7 +44,6 @@
 #include "netif/etharp.h"
 #include "err.h"
 #include "ethernetif.h"
-#include "udp_echo.h"
 
 
 #include "gd32f4xx_enet.h"
@@ -55,7 +54,7 @@
 #include "rtt_log.h"
 
 #define ETHERNETIF_INPUT_TASK_STACK_SIZE          (350)
-#define ETHERNETIF_INPUT_TASK_PRIO                (configMAX_PRIORITIES - 1)
+#define ETHERNETIF_INPUT_TASK_PRIO                (configMAX_PRIORITIES - 3)
 #define LOWLEVEL_OUTPUT_WAITING_TIME              (250)
 /* The time to block waiting for input */
 #define LOWLEVEL_INPUT_WAITING_TIME               ((portTickType )100)
@@ -143,8 +142,10 @@ static void low_level_init(struct netif *netif)
     enet_ptp_enhanced_descriptors_chain_init(ENET_DMA_RX);
     printf("      Mode: Enhanced PTP descriptor chain\r\n");
 #else
-    enet_descriptors_chain_init(ENET_DMA_TX);
-    enet_descriptors_chain_init(ENET_DMA_RX);
+    // enet_descriptors_chain_init(ENET_DMA_TX);
+    // enet_descriptors_chain_init(ENET_DMA_RX);
+    enet_descriptors_ring_init(ENET_DMA_TX);
+    enet_descriptors_ring_init(ENET_DMA_RX);
     APP_PRINTF("      Mode: Standard descriptor chain\r\n");
 #endif /* SELECT_DESCRIPTORS_ENHANCED_MODE */  
 
@@ -219,6 +220,7 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
         SYS_ARCH_PROTECT(sr);
       
         while((uint32_t)RESET != (dma_current_txdesc->status & ENET_TDES0_DAV)){
+            // vTaskDelay(pdMS_TO_TICKS(10));  
         }    
         buffer = (uint8_t *)(enet_desc_information_get(dma_current_txdesc, TXDESC_BUFFER_1_ADDR));
 

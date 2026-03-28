@@ -15,8 +15,8 @@
 #define BUS_CURRENT_SENSOR_FULL_V    1.0f      // 满量程对应的传感器电压
 #define BUS_CURRENT_CONVERT_RATIO    (BUS_CURRENT_FULL_SCALE_A / BUS_CURRENT_SENSOR_FULL_V) // 电流换算系数（435）
 
-#define BUS_VOLTAGE_IDLE_THRESHOLD   200.0f    // 母线电压空置阈值
-#define BUS_CURRENT_IDLE_THRESHOLD   200.0f    // 母线电流控制阈值
+#define BUS_VOLTAGE_IDLE_THRESHOLD   100.0f    // 母线电压空置阈值
+#define BUS_CURRENT_IDLE_THRESHOLD   100.0f    // 母线电流空置阈值
 
 #define D1_LOGIC_HIGH_VOLTAGE_MAX    74.0f     // 逻辑高电平最大电压    
 #define D1_LOGIC_HIGH_VOLTAGE_MIN    50.0f     // 逻辑高电平最小电压
@@ -86,7 +86,7 @@ typedef struct
 /* ADC数据缓存 */
 typedef struct
 {
-    AdcItem_t item[800];
+    AdcItem_t item[600];
     uint32_t wr_idx;                   // 写指针
     uint32_t rd_idx;                   // 读指针
     uint32_t count;                    // 当前缓存数据量
@@ -139,6 +139,7 @@ typedef struct {
     SemaphoreHandle_t alarm_sem;
     uint32_t alarm_ts;           //
     AlarmType type;
+    uint8_t num;
     uint8_t alarm_sta;
     uint8_t save_sta;
     uint8_t index;

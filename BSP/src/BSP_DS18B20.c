@@ -49,6 +49,7 @@ bool ds18b20_read_temp(void)
 
     uint8_t temp_raw[2] = {0};
     uint16_t temp_val = 0;
+    float temp_c = 0.0f;
 
     if (xSemaphoreTake(self->mutexSem, DS18B20_LOCK_TIMEOUT) != pdPASS) {
         return false;
@@ -66,10 +67,14 @@ bool ds18b20_read_temp(void)
     if (temp_raw[1] > 7) {
         temp_val = temp_raw[1] << 8 | temp_raw[0];
         temp_val = ~temp_val;
-        self->temp_c = -(float)(temp_val + 1) * 0.0625f; 
+        temp_c = -(float)(temp_val + 1) * 0.0625f; //0.125f;
     } else {
         temp_val = temp_raw[1] << 8 | temp_raw[0];
-        self->temp_c = (float)temp_val * 0.0625f;
+        temp_c = (float)temp_val * 0.0625f; //0.125f
+    }
+    
+    if (temp_c > 0) {
+        self->temp_c = temp_c;
     }
 
     xSemaphoreGive(self->mutexSem);
@@ -97,6 +102,62 @@ float ds18b20_get_temp(void)
     return tmp;
 }
 
+void ds18b20_set_resolution(uint8_t res)
+{
+    uint8_t cfg_val = 0; 
+    DS18B20_Object_t *self = (DS18B20_Object_t *)&g_ds18b20;
+    uint8_t th_val = 0;
+    uint8_t tl_val = 0;
+
+    if (xSemaphoreTake(self->mutexSem, DS18B20_LOCK_TIMEOUT) != pdPASS) {
+        return ;
+    }
+
+    onewire_reset(self->ow_dev);
+    onewire_check(self->ow_dev);
+
+    onewire_write_byte(self->ow_dev, DS18B20_CMD_SKIP_ROM);
+    onewire_write_byte(self->ow_dev, DS18B20_CMD_READ_SCR);
+    
+    onewire_read_byte(self->ow_dev); 
+    onewire_read_byte(self->ow_dev); 
+    th_val = onewire_read_byte(self->ow_dev);
+    tl_val = onewire_read_byte(self->ow_dev);
+    cfg_val = onewire_read_byte(self->ow_dev);
+
+    // APP_PRINTF("th_val:0x%x, tl_val:0x%x, cfg_val:0x%x\r\n", th_val, tl_val, cfg_val);
+    switch (res) {
+        case DS18B20_RESOLUTION_9:
+            cfg_val = 0x1F;
+        break;
+        case DS18B20_RESOLUTION_10:
+            cfg_val = 0x3F;
+        break;
+        case DS18B20_RESOLUTION_11:
+            cfg_val = 0x5F;
+        break;
+        case DS18B20_RESOLUTION_12:
+            cfg_val = 0x7F;
+        break;
+        default :
+        xSemaphoreGive(self->mutexSem);
+        return ;
+    }
+
+    onewire_reset(self->ow_dev);
+    onewire_check(self->ow_dev);
+
+    onewire_write_byte(self->ow_dev, DS18B20_CMD_SKIP_ROM);
+    onewire_write_byte(self->ow_dev, DS18B20_CMD_WRITE_SCR);
+
+    onewire_write_byte(self->ow_dev, th_val);
+    onewire_write_byte(self->ow_dev, tl_val);
+    onewire_write_byte(self->ow_dev, cfg_val);
+    
+    xSemaphoreGive(self->mutexSem);
+}
+
+
 /**
  * @brief  DS18B20初始化
  * @param  void
@@ -111,8 +172,10 @@ void ds18b20_init(void)
     self->is_ready = true;
     self->mutexSem = xSemaphoreCreateMutex();
     onewire_init(self->ow_dev);
+
     onewire_reset(self->ow_dev);
     onewire_check(self->ow_dev);
     ds18b20_start_convert();
+    //ds18b20_set_resolution(DS18B20_RESOLUTION_11);
 }
 

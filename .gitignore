@@ -1,5 +1,6 @@
 .vscode
 output
 *.91558
-JLinkLog.txt
+MDK-ARM/JLinkLog.txt
+
 

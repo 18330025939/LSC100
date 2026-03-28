@@ -152,6 +152,9 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
         emmcreadblocks((uint8_t *)&item_tables[0], index_addr + num,  1);
         index = ADC_INDEX_NUM_PRE_BLOCK;
         
+        if (item_tables[ADC_INDEX_NUM_PRE_BLOCK - 1].timestamp < timestamp) {
+            continue;
+        }
         for (i = 0; i < index; i++) {
             if (timestamp == item_tables[i].timestamp) {
                 #if 0
@@ -377,8 +380,9 @@ int8_t Storage_Read_AlarmInfo(AlarmObject_t *alarm, uint32_t timestamp, uint32_t
         index_addr += GD55B01GE_PAGE_SIZE;
 
     } while (num < alarm->index_num);
-exit:
 #endif
+
+exit:
     xSemaphoreGive(alarm->mutex);
 
     return ret;
@@ -458,7 +462,8 @@ void storage_task(void *pvParameters)
     uint16_t read_len;
     uint32_t index = 0;
     uint16_t i = 0;
-    
+    // TickType_t xLastWakeTime = xTaskGetTickCount(); 
+
     for (;;)
     {
         if (Adc_Cache_Get_Count(&g_AdcItemCache) >= 100) {
@@ -483,7 +488,8 @@ void storage_task(void *pvParameters)
                 }
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(30));
+        // vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100));
     }
 }
 
@@ -539,6 +545,7 @@ void alarm_task(void *pvParameters)
                 } else if (alarm_msg.type == BUS_ALARM_SAVE) {
                     ret = Storage_Read_AdcData(&g_AdcObject, alarm_msg.ts, 0, g_adc_data, sizeof(g_adc_data) / EMMC_BLOCK_SIZE);
                     if (ret == 0) {
+                        g_AlarmNotify.index += 1;
                         Storage_Write_AlarmInfo(&g_AlarmObject, g_AlarmNotify.alarm_ts + 1, off, g_adc_data, sizeof(g_adc_data), g_AlarmNotify.index >= 3 ? 1 : 0);
                     }
                 }
