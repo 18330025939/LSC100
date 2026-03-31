@@ -554,6 +554,9 @@ static void kt_SampleData(void *arg)
     if (end_ts < str_ts) {
         return ;
     }
+    if (end_ts > (str_ts + 59)) {
+        end_ts = str_ts + 59;
+    }
     
     pstMsgHdr = (MsgFramHdr_t *)buf;
     pstMsgHdr->usHdr = MSG_DATA_FRAM_HDR;
