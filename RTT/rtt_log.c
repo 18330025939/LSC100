@@ -30,7 +30,7 @@ int rtt_log(const char *fmt,...)
 int APP_PRINTF(const char *fmt,...)
 {
     int n = 0;
-#if 0
+#if 1
     va_list args;
     
     va_start(args,fmt);

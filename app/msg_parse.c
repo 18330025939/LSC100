@@ -563,13 +563,15 @@ static void kt_SampleData(void *arg)
     pstSamInReq = (SampleDataInRes_t *)(buf + sizeof(MsgFramHdr_t));
     pstSamInReq->ulTotalPack = (end_ts - str_ts + 1) * ADC_ITEM_NUM_PER_SECOND / 50;;
     pstMsgCrc = (MsgFramCrc_t *)(buf + sizeof(MsgFramHdr_t) + sizeof(SampleDataInRes_t));
-    for (uint8_t i = 0; i <= end_ts - str_ts; i++) {
+    for (uint16_t i = 0; i <= (end_ts - str_ts);) {
         pstSamInReq->ulCurrSequ = i * 20;
         pstSamInReq->ulStrTs = str_ts + i;
         pstSamInReq->ulEndTs = str_ts + i;
         pstMsgCrc->usCrc = checkSum_8(buf, len - sizeof(MsgFramCrc_t));
         pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
-        enQueue(&g_CirQue, buf, len);
+        if (TRUE == enQueue(&g_CirQue, buf, len)) {
+            i += 1;
+        }
     }
 }
 
@@ -585,8 +587,9 @@ static void kt_SampleDataIn(void *arg)
     SampleDataRes_t *pstSampleRes = NULL;
     SampleDataInRes_t *pstSamInReq = NULL;
     AdcItem_t *item = NULL;
+    SystemTime_t sTime;
     uint32_t str_ts = 0;
-    uint32_t end_ts = 0;
+//    uint32_t end_ts = 0;
     uint16_t len = 0;
     uint32_t curr_index = 0;
     uint16_t off = 0;
@@ -608,16 +611,25 @@ static void kt_SampleDataIn(void *arg)
 
     pstSamInReq = (SampleDataInRes_t *)((uint8_t *)arg + sizeof(MsgFramHdr_t));
     str_ts = pstSamInReq->ulStrTs;
-    end_ts = pstSamInReq->ulEndTs;
+//    end_ts = pstSamInReq->ulEndTs;
     curr_index = pstSamInReq->ulCurrSequ;
     pstSampleRes->ulTotalPack = pstSamInReq->ulTotalPack;
     pstSampleRes->ulTotalPack = DW_HConvert(&pstSampleRes->ulTotalPack);
     pstMsgCrc = (MsgFramCrc_t *)(g_send + sizeof(MsgFramHdr_t) + sizeof(SampleDataRes_t));
 
     #if 0
-    APP_PRINTF("kt_SampleDataIn, str_ts:%lu, end_ts:%lu\r\n", str_ts, end_ts);
+    APP_PRINTF("kt_SampleDataIn, str_ts:%lu\r\n", str_ts);
     #endif
     ret = Storage_Read_AdcData(&g_AdcObject, str_ts, off, g_buf, 125);
+    if (ret) {
+        timestamp_to_datetime(str_ts, &sTime);
+        pstSampleRes->stTime.ucYear = dec_to_bcd(sTime.ucYear); 
+        pstSampleRes->stTime.ucMonth = dec_to_bcd(sTime.ucMonth); 
+        pstSampleRes->stTime.ucDay = dec_to_bcd(sTime.ucDay); 
+        pstSampleRes->stTime.ucHour = dec_to_bcd(sTime.ucHour); 
+        pstSampleRes->stTime.ucMin = dec_to_bcd(sTime.ucMin); 
+        pstSampleRes->stTime.ucScd = dec_to_bcd(sTime.ucScd); 
+    }
     for (num = 0; num < 20; num ++) {
         pstSampleRes->ulCurrSequ = DW_HConvert(&curr_index);
         if (ret == 0) {
@@ -632,7 +644,12 @@ static void kt_SampleDataIn(void *arg)
                 pstSampleRes->data[index].r_cur.u = DW_HConvert(&item->data[2].u);
                 pstSampleRes->data[index].r_vlt.u = DW_HConvert(&item->data[3].u);
             }
-        }  
+        } else {
+            pstSampleRes->ullTs = str_ts;
+            pstSampleRes->ullTs = pstSampleRes->ullTs * 1000 + num * 50;
+            pstSampleRes->ullTs = QW_HConvert(&pstSampleRes->ullTs);
+            // pstSampleRes->temp.u = 0; 
+        } 
         pstMsgCrc->usCrc = checkSum_8(g_send, len - sizeof(MsgFramCrc_t));
         pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
         tcp_server_send_data(&g_TcpServerHandle, g_send, len);
@@ -743,8 +760,8 @@ void system_init(void)
                 g_ConfigInfo.r_Cbias0.f, g_ConfigInfo.f_Cbias0.f, g_ConfigInfo.r_Vbias0.f, g_ConfigInfo.f_Vbias0.f);
     APP_PRINTF("g_ConfigInfo.f_Vgain.f:%lf, g_ConfigInfo.f_Cgain.f:%lf, g_ConfigInfo.r_Vgain.f:%lf, g_ConfigInfo.r_Cgain.f:%lf\r\n",       
                 g_ConfigInfo.f_Vgain.f, g_ConfigInfo.f_Cgain.f, g_ConfigInfo.r_Vgain.f, g_ConfigInfo.r_Cgain.f);
-    APP_PRINTF("g_ConfigInfo.flag:%d,  block_num:%d, curr_block:%d, str_time:%lu, end_time:%lu, alarm_num:%d\r\n",       
-                g_ConfigInfo.flag,  g_ConfigInfo.block_num, g_ConfigInfo.curr_block, g_ConfigInfo.str_time, g_ConfigInfo.end_time, g_ConfigInfo.alarm_num);
+    APP_PRINTF("g_ConfigInfo.flag:%x, g_ConfigInfo.cal_flag:%x, block_num:%d, curr_block:%d, str_time:%lu, end_time:%lu, alarm_num:%d\r\n",       
+                g_ConfigInfo.flag, g_ConfigInfo.cal_flag, g_ConfigInfo.block_num, g_ConfigInfo.curr_block, g_ConfigInfo.str_time, g_ConfigInfo.end_time, g_ConfigInfo.alarm_num);
 }
 
 /**
@@ -814,8 +831,10 @@ void msg_send_task(void *pvParameters)
     {
         ret = deQueue(que, msg);
         if (ret) {
-            if(xQueueSend(handle->queue, msg, pdMS_TO_TICKS(100)) != pdPASS) {
-                vTaskDelay(pdMS_TO_TICKS(10));  // 降低CPU占用
+            uint8_t retry = 0;
+            while (xQueueSend(handle->queue, msg, pdMS_TO_TICKS(20)) != pdPASS && retry < 3) {
+                // APP_PRINTF("msg_send_task, xQueueSend retry %d\r\n", retry+1);
+                retry++;
             }
         }
 
@@ -838,10 +857,12 @@ void msg_send_task(void *pvParameters)
 
 void msg_parse_start(void)
 {
-    g_TcpServerHandle.queue = xQueueCreate(5, 128);
+    g_TcpServerHandle.queue = xQueueCreate(20, 100);
     initCirQueue(&g_CirQue); 
 
     tcp_server_start(&g_TcpServerHandle);
+
+    BaseType_t type = pdPASS;
 
     xTaskCreate((TaskFunction_t)msg_proc_task,            // 任务函数
                 (const char*   )"msg_proc_task",          // 任务名称
@@ -849,6 +870,9 @@ void msg_parse_start(void)
                 (void*         )&g_TcpServerHandle,       // 任务参数
                 (UBaseType_t   )MSGPROC_TASK_PRIO,        // 任务优先级
                 (TaskHandle_t* )&MsgProc_Task_Handle);    // 任务句柄
+    if (type != pdPASS) {
+        APP_PRINTF("msg_proc_task failed\r\n");
+    }
 
     xTaskCreate((TaskFunction_t)msg_send_task,            // 任务函数
                 (const char*   )"msg_send_task",          // 任务名称
@@ -856,4 +880,7 @@ void msg_parse_start(void)
                 (void*         )&g_TcpServerHandle,       // 任务参数
                 (UBaseType_t   )MSGSEND_TASK_PRIO,        // 任务优先级
                 (TaskHandle_t* )&MsgSend_Task_Handle);    // 任务句柄
+    if (type != pdPASS) {
+        APP_PRINTF("msg_send_task failed\r\n");
+    }
 }

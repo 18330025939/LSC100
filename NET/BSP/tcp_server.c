@@ -56,7 +56,7 @@ void tcp_server_task(void *pvParameters)
                 break;
             }
             
-           if(xQueueSend(pHandle->queue, recv_buf, pdMS_TO_TICKS(100)) != pdPASS)
+           if(xQueueSend(pHandle->queue, recv_buf, pdMS_TO_TICKS(50)) != pdPASS)
             {
                APP_PRINTF("TCP Server queue send error\n");
                vTaskDelay(pdMS_TO_TICKS(5));  // 降低CPU占用

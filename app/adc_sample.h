@@ -45,7 +45,7 @@
     ((actual_bus_current > (D1_LOGIC_HIGH_VOLTAGE_MIN * 0.091f) && actual_bus_current < (D1_LOGIC_HIGH_VOLTAGE_MAX * 0.091f)) ? 1 : 0)
 
 #define SAMPLE_TASK_PRIO        (configMAX_PRIORITIES - 1)      /* 任务优先级 */
-#define SAMPLE_STK_SIZE 	    1024                            /* 任务堆栈大小 */ 
+#define SAMPLE_STK_SIZE 	    1152                            /* 任务堆栈大小 */ 
 #define TIME_SYNC_TASK_PRIO     (configMAX_PRIORITIES - 2)      /* 任务优先级 */
 #define TIME_SYNC_STK_SIZE 	    1024                            /* 任务堆栈大小 */ 
 

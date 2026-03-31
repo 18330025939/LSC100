@@ -326,7 +326,7 @@ typedef struct
 #define MSGPROC_TASK_PRIO     (configMAX_PRIORITIES - 3)
 #define MSGPROC_STACK_SIZE    1024
 
-#define MSGSEND_TASK_PRIO     (configMAX_PRIORITIES - 3)
+#define MSGSEND_TASK_PRIO     (configMAX_PRIORITIES - 4)
 #define MSGSEND_STACK_SIZE    1024
 
 typedef struct

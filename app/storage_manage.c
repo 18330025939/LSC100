@@ -37,6 +37,7 @@ TaskHandle_t StorageTask_Handle;
 TaskHandle_t AlarmTask_Handle; 
 static uint8_t g_adc_items[(ADC_ITEM_NUM_PER_SECOND + 100) * ADC_ITEM_SIZE] = {0};
 static uint8_t g_adc_data[ADC_ITEM_NUM_PER_SECOND * ADC_ITEM_SIZE] = {0};
+static AdcIndexItem_t g_item_tables[ADC_INDEX_NUM_PRE_BLOCK * 5] = {0};
 
 int8_t Get_AdcData_Time(AdcObject_t *adc, SystemTime_t *str_time, SystemTime_t *end_time)
 {
@@ -130,42 +131,51 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
         return ret; 
     }
 
-    uint8_t i = 0;
+    uint16_t i = 0;
     uint16_t num = 1;
+    uint8_t step = 0;
     uint8_t index = adc->item_index;
     uint32_t index_addr = ADC_INDEX_START_BLOCK;
-    AdcIndexItem_t item_tables[ADC_INDEX_NUM_PRE_BLOCK] = {0};
+    // AdcIndexItem_t item_tables[ADC_INDEX_NUM_PRE_BLOCK * 2] = {0};
 
-    memcpy(item_tables, adc->item_tables, sizeof(item_tables));
-    for (i = 0; i < index; i ++) {
-        if (timestamp == item_tables[i].timestamp) {
-            #if 0
-            APP_PRINTF("Storage_Read_AdcData, timestamp:%lu, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
-            #endif
-            emmcreadblocks(data, item_tables[i].addr + block_off, block_num);
-            ret = 0;
-            goto exit;
-        }
-    }
-
-    for (num = 0; num < adc->block_num; num++) {
-        emmcreadblocks((uint8_t *)&item_tables[0], index_addr + num,  1);
-        index = ADC_INDEX_NUM_PRE_BLOCK;
-        
-        if (item_tables[ADC_INDEX_NUM_PRE_BLOCK - 1].timestamp < timestamp) {
-            continue;
-        }
-        for (i = 0; i < index; i++) {
-            if (timestamp == item_tables[i].timestamp) {
+    // memcpy(item_tables, adc->item_tables, sizeof(item_tables));
+    if (adc->item_tables[0].timestamp <= timestamp && timestamp <= adc->item_tables[index - 1].timestamp) {
+        for (i = 0; i < index; i ++) {
+            if (timestamp == adc->item_tables[i].timestamp) {
                 #if 0
                 APP_PRINTF("Storage_Read_AdcData, timestamp:%lu, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
                 #endif
-                emmcreadblocks(data, item_tables[i].addr + block_off, block_num);
+                emmcreadblocks(data, adc->item_tables[i].addr + block_off, block_num);
                 ret = 0;
                 goto exit;
             }
-        }      
+        }
+    } else {
+        for (num = 0; num < adc->block_num; ) {
+            if ((adc->block_num - num) > 5) {
+                step = 5;
+            } else {
+                step = adc->block_num - num;
+            }
+            emmcreadblocks((uint8_t *)&g_item_tables[0], index_addr + num, step);
+            
+            if (g_item_tables[ADC_INDEX_NUM_PRE_BLOCK * step - 1].timestamp >= timestamp) {
+                for (i = 0; i < ADC_INDEX_NUM_PRE_BLOCK * step; i++) {
+                    if (timestamp == g_item_tables[i].timestamp) {
+                        #if 0
+                        APP_PRINTF("Storage_Read_AdcData, timestamp:%lu, block_num:%d, adc->block_num:%d, item_tables[i].addr:%d\r\n", timestamp, block_num, adc->block_num, item_tables[i].addr);
+                        #endif
+                        emmcreadblocks(data, g_item_tables[i].addr + block_off, block_num);
+                        ret = 0;
+                        goto exit;
+                    }
+                }
+                break;
+            }
+            num += step;
+        }
     }
+    
 exit:
     xSemaphoreGive(adc->mutex);
 
@@ -380,9 +390,9 @@ int8_t Storage_Read_AlarmInfo(AlarmObject_t *alarm, uint32_t timestamp, uint32_t
         index_addr += GD55B01GE_PAGE_SIZE;
 
     } while (num < alarm->index_num);
+exit:
 #endif
 
-exit:
     xSemaphoreGive(alarm->mutex);
 
     return ret;
@@ -459,7 +469,7 @@ uint8_t Adc_Object_Init(AdcObject_t *object)
 void storage_task(void *pvParameters)
 { 
     AdcItem_t *pItem = NULL;
-    uint16_t read_len;
+    uint16_t read_len = 0;
     uint32_t index = 0;
     uint16_t i = 0;
     // TickType_t xLastWakeTime = xTaskGetTickCount(); 
@@ -469,14 +479,19 @@ void storage_task(void *pvParameters)
         if (Adc_Cache_Get_Count(&g_AdcItemCache) >= 100) {
             read_len = Adc_Cache_Read_Batch(&g_AdcItemCache, (AdcItem_t *)&g_adc_items[index], 100);
             if (read_len > 0) {
-                for (i = 0; i < read_len; i ++) {
+                for (i = 1; i <= read_len; i ++) {
                     pItem = (AdcItem_t *)&g_adc_items[index];
                     #if 0
                     APP_PRINTF("storage_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf\r\n", pItem->data[SENSOR_FRONT_CURRENT].f, pItem->data[SENSOR_FRONT_VOLTAGE].f, pItem->data[SNESOR_REAR_CURRENT].f, pItem->data[SNESOR_REAR_VOLTAGE].f);
                     #endif
-                    if ((pItem->ts % ADC_ITEM_NUM_PER_SECOND) == 0 && index > ADC_ITEM_SIZE) {
-                        Storage_Write_AdcData(&g_AdcObject, pItem->ts / 1000 - 1, &g_adc_items[0], (ADC_ITEM_SIZE * ADC_ITEM_NUM_PER_SECOND) / EMMC_BLOCK_SIZE, 1);
-                        memcpy(&g_adc_items[0], &g_adc_items[index], (read_len - i) * ADC_ITEM_SIZE);
+                    if ((pItem->ts % ADC_ITEM_NUM_PER_SECOND) == 999 && index > ADC_ITEM_SIZE) {
+                        #if 0
+                        APP_PRINTF("storage_task, pItem->ts:%llu, index:%d, read_len:%d, i:%d\r\n", pItem->ts, index, read_len, i);
+                        #endif
+                        Storage_Write_AdcData(&g_AdcObject, (uint32_t)(pItem->ts / 1000), &g_adc_items[0], (ADC_ITEM_SIZE * ADC_ITEM_NUM_PER_SECOND) / EMMC_BLOCK_SIZE, 1);
+                        if (read_len - i) {
+                            memcpy(&g_adc_items[0], &g_adc_items[index], (read_len - i) * ADC_ITEM_SIZE);
+                        }
                         index = (read_len - i) * ADC_ITEM_SIZE;
                         break;
                     } else {
@@ -486,6 +501,7 @@ void storage_task(void *pvParameters)
                         }
                     }
                 }
+                // vTaskDelay(pdMS_TO_TICKS(1));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(30));
@@ -560,19 +576,25 @@ void storage_manage_start(void)
     Adc_Object_Init(&g_AdcObject);
 
     Alarm_Object_Init(&g_AlarmObject);
+    BaseType_t type = pdPASS;
 
-    xTaskCreate((TaskFunction_t)storage_task,              // 任务函数
+    type = xTaskCreate((TaskFunction_t)storage_task,              // 任务函数
                 (const char*    )"storage_Task",           // 任务名称
                 (uint16_t       )STORAGE_STK_SIZE,         // 任务栈大小
                 (void*          )NULL,                     // 任务参数
                 (UBaseType_t    )STORAGE_TASK_PRIO,        // 任务优先级（低于定时器中断优先级）
                 (TaskHandle_t*  )&StorageTask_Handle);     // 任务句柄
 
-
-    xTaskCreate((TaskFunction_t)alarm_task,                 // 任务函数
+    if (type != pdPASS) {
+        APP_PRINTF("storage_task failed\r\n");
+    }
+    type = xTaskCreate((TaskFunction_t)alarm_task,                 // 任务函数
                 (const char*    )"alarm_Task",              // 任务名称
                 (uint16_t       )ALARM_STK_SIZE,            // 任务栈大小
                 (void*          )NULL,                      // 任务参数
                 (UBaseType_t    )ALARM_TASK_PRIO,           // 任务优先级（低于定时器中断优先级）
                 (TaskHandle_t*  )&AlarmTask_Handle);        // 任务句柄
+     if (type != pdPASS) {
+        APP_PRINTF("alarm_task failed\r\n");
+    }
 }

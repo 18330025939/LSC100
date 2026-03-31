@@ -290,7 +290,7 @@ uint64_t TimeSync_Get_Absolute_Time(uint64_t curr_tick, SystemTime_t *time)
         abs_time = abs_time * 1000 + final_ms;    // 拼接最终毫秒级时间戳
         #else
         abs_time = (uint64_t)(g_TimeSync.rtc_base_sec) * 1000;
-        abs_time += curr_tick % 1000;
+        // abs_time += curr_tick % 1000;
         #endif
         xSemaphoreGive(g_TimeSync.mutex);
     }
@@ -327,7 +327,7 @@ void time_sync_init(TimeSync_t *time_sync)
                                                     bcd_to_dec(time_sync->sys_time.ucMin),
                                                     bcd_to_dec(time_sync->sys_time.ucScd));
                                                 
-    #if 0
+    #if 1
     APP_PRINTF("time_sync_task, time:%x-%x-%x %x:%x:%x, g_TimeSync.rtc_base_sec:%lu, g_TimeSync.tick_base:%lu\r\n", 
                                 time_sync->sys_time.ucYear, time_sync->sys_time.ucMonth, time_sync->sys_time.ucDay,
                                 time_sync->sys_time.ucHour, time_sync->sys_time.ucMin, time_sync->sys_time.ucScd,
@@ -388,7 +388,7 @@ void time_sync_task(void *pvParameters)
 void timer0_irq_handler_cb(void)
 {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    g_sample_tick += 1;
+    // g_sample_tick += 1;
 
     if(SampleTask_Handle != NULL)
     {
@@ -611,11 +611,11 @@ static void ma_init(Ma_t *ma)
             cm2248_read_both_channels(&item.raw_data[index], &raw_adc[index]);
             data[index].u += item.raw_data[index];
         }
+        cm2248_start_conv();
         data[SENSOR_FRONT_CURRENT].f += ((float)item.raw_data[SENSOR_FRONT_CURRENT] - g_ConfigInfo.f_Cbias0.f);
         data[SENSOR_FRONT_VOLTAGE].f += ((float)item.raw_data[SENSOR_FRONT_VOLTAGE] - g_ConfigInfo.f_Vbias0.f);
         data[SNESOR_REAR_CURRENT].f += ((float)item.raw_data[SNESOR_REAR_CURRENT] - g_ConfigInfo.r_Cbias0.f);
         data[SNESOR_REAR_VOLTAGE].f += ((float)item.raw_data[SNESOR_REAR_VOLTAGE] - g_ConfigInfo.r_Vbias0.f);
-        cm2248_start_conv();
         delay_us(2 * 1000);
     }
 
@@ -732,6 +732,8 @@ void sample_task(void *pvParameters)
             } else {
                 item.ts += 1;
             }
+            g_sample_tick += 1;
+
             
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i ++) {
                 // sensor_data = ((float)item.raw_data[i] / 65535.0f) * 10.0f;
@@ -769,10 +771,16 @@ void sample_task(void *pvParameters)
                 }
                 #if 0
                 APP_PRINTF("sample_task, time:%x-%x-%x %x:%x:%x, ts:%lu\r\n", item.time.ucYear, item.time.ucMonth, item.time.ucDay, item.time.ucHour, item.time.ucMin, item.time.ucScd, item.ts);
-                APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf, item.ts:%lu\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f, item.ts);
+                // APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf, item.ts:%lu\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f, item.ts);
                 #endif
                 Adc_Cache_Write_One((AdcItemCache_t *)&g_AdcItemCache, (const AdcItem_t *)&item);
                 Adc_Check_Alarm(&item);
+                // if (g_sample_tick % 1000 == 0) {
+                //     item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
+                //     item.temp.f = ds18b20_get_temp();
+                // } else {
+                //     item.ts += 1;
+                // }
             } else {
                 cal_bias_zero(&g_cal, &item);
                 cal_bias_full(&g_cal, &item);
@@ -792,13 +800,17 @@ void adc_sample_start(void)
     time_sync_init(&g_TimeSync);
     
     ds18b20_read_temp();
-    
+    BaseType_t type = pdPASS;
+
     xTaskCreate((TaskFunction_t)time_sync_task,             // 任务函数
                 (const char*   )"time_sync_task",           // 任务名称
                 (uint16_t      )TIME_SYNC_STK_SIZE,         // 任务栈大小
                 (void*         )NULL,                       // 任务参数
                 (UBaseType_t   )TIME_SYNC_TASK_PRIO,        // 任务优先级（低于定时器中断优先级）
                 (TaskHandle_t* )&TimeSyncTask_Handle);      // 任务句柄
+    if (type != pdPASS) {
+        APP_PRINTF("time_sync_task failed\r\n");
+    }
 
     xTaskCreate((TaskFunction_t)sample_task,                // 任务函数
                 (const char*   )"sample_task",              // 任务名称
@@ -806,4 +818,7 @@ void adc_sample_start(void)
                 (void*         )NULL,                       // 任务参数
                 (UBaseType_t   )SAMPLE_TASK_PRIO,           // 任务优先级（低于定时器中断优先级）
                 (TaskHandle_t* )&SampleTask_Handle);        // 任务句柄
+    if (type != pdPASS) {
+        APP_PRINTF("sample_task failed\r\n");
+    }
 }
