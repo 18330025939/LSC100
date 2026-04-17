@@ -56,19 +56,19 @@ void systick_config(void)
     NVIC_SetPriority(SysTick_IRQn, 0x00U);
 }
 
-/*!
-    \brief      delay a time in milliseconds
-    \param[in]  count: count in milliseconds
-    \param[out] none
-    \retval     none
-*/
-void delay_ms(uint32_t count)
-{
-    delay = count;
+// /*!
+//     \brief      delay a time in milliseconds
+//     \param[in]  count: count in milliseconds
+//     \param[out] none
+//     \retval     none
+// */
+// void delay_ms(uint32_t count)
+// {
+//     delay = count;
 
-    while(0U != delay){
-    }
-}
+//     while(0U != delay){
+//     }
+// }
 /*!
     \brief      微秒延时函数
     \param[in]  nus: 要延时的微秒数

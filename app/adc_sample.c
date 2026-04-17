@@ -39,6 +39,7 @@
 
 
 __IO uint64_t g_sample_tick = 0ULL;
+__IO uint32_t g_boot_ts = 0;
 __IO uint8_t g_cal_key1_status = 0;
 __IO uint8_t g_cal_key2_status = 0;
 TimeSync_t g_TimeSync = {0};
@@ -476,12 +477,16 @@ static void Adc_Check_Alarm(AdcItem_t *item)
             return ; 
         }  
         
-        if (g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE) {
+        if (g_AlarmNotify.save_sta == ALARM_STA_STR_SAVE || g_boot_ts > (item->ts / 1000)) {
             xSemaphoreGive(g_AlarmNotify.mutex);
             return ;
         }
         // alarm_msg.type = flag == 1 ? BUS_ALARM_FRONT_VOL : (flag == 2 ? BUS_ALARM_REAR_VOL : BUS_ALARM_FRONT_REAR_VOL);
         if (alarm_msg.type == g_AlarmNotify.type) {
+            if (g_AlarmNotify.alarm_sta == ALARM_STA_RAISED) {
+                xSemaphoreGive(g_AlarmNotify.mutex);
+                return;
+            }
             g_AlarmNotify.num += 1;
             if (g_AlarmNotify.num < 5) {
                 xSemaphoreGive(g_AlarmNotify.mutex);
@@ -515,6 +520,20 @@ static void Adc_Check_Alarm(AdcItem_t *item)
         xSemaphoreGiveFromISR(g_AlarmNotify.alarm_sem, &xHigherPriorityTaskWoken);
         
         xSemaphoreGive(g_AlarmNotify.mutex);
+    } else {
+        if (xSemaphoreTake(g_AlarmNotify.mutex, pdMS_TO_TICKS(10)) != pdPASS) {
+            return ; 
+        }  
+
+        if (g_AlarmNotify.type) {
+            g_AlarmNotify.type = BUS_ALARM_NONE;
+        }
+        if (g_AlarmNotify.alarm_sta == ALARM_STA_RAISED) {
+            g_AlarmNotify.alarm_sta = ALARM_STA_RECOVERY;
+        }
+
+
+        xSemaphoreGive(g_AlarmNotify.mutex);
     }
 }
 
@@ -531,7 +550,7 @@ static void Adc_Clear_Alarm(uint16_t raw_data)
         return ; 
     }   
 
-    if (g_AlarmNotify.alarm_sta == ALARM_STA_RAISED) {
+    if (g_AlarmNotify.alarm_sta == ALARM_STA_RAISED || g_AlarmNotify.alarm_sta == ALARM_STA_RECOVERY) {
         adc = ((float)raw_data / 65535.0f) * 10.0f;
         if (IS_CLEANR_ALARM(adc)) {
             g_AlarmNotify.alarm_sta = ALARM_STA_CLEARED;
@@ -713,6 +732,7 @@ void sample_task(void *pvParameters)
     item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
     item.temp.f = ds18b20_get_temp();
     timer0_start();
+    g_boot_ts = item.ts / 1000 + 2;
     
     for (;;)
     {

@@ -10,7 +10,7 @@
 #define TCP_RECV_BUF_LEN      128     // 接收缓冲区长度
 #define TCP_SEND_BUF_LEN      128     // 发送缓冲区长度
 #define TCP_SERVER_TASK_STACK 1024    // 任务栈大小
-#define TCP_SERVER_TASK_PRIO  2       // 任务优先级（FreeRTOS优先级，数值越大越高）
+#define TCP_SERVER_TASK_PRIO  1       // 任务优先级（FreeRTOS优先级，数值越大越高）
 
 typedef struct 
 {

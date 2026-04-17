@@ -566,15 +566,13 @@ static void kt_SampleData(void *arg)
     pstSamInReq = (SampleDataInRes_t *)(buf + sizeof(MsgFramHdr_t));
     pstSamInReq->ulTotalPack = (end_ts - str_ts + 1) * ADC_ITEM_NUM_PER_SECOND / 50;;
     pstMsgCrc = (MsgFramCrc_t *)(buf + sizeof(MsgFramHdr_t) + sizeof(SampleDataInRes_t));
-    for (uint16_t i = 0; i <= (end_ts - str_ts);) {
+    for (uint8_t i = 0; i <= (end_ts - str_ts); i++) {
         pstSamInReq->ulCurrSequ = i * 20;
         pstSamInReq->ulStrTs = str_ts + i;
         pstSamInReq->ulEndTs = str_ts + i;
         pstMsgCrc->usCrc = checkSum_8(buf, len - sizeof(MsgFramCrc_t));
         pstMsgCrc->usCrc = HConvert(&pstMsgCrc->usCrc);
-        if (TRUE == enQueue(&g_CirQue, buf, len)) {
-            i += 1;
-        }
+        enQueue(&g_CirQue, buf, len);
     }
 }
 
@@ -758,7 +756,7 @@ void system_init(void)
     } else if (g_ConfigInfo.flag == DEV_FLAG_FIRST_ON && g_ConfigInfo.cal_flag == DEV_CAL_END) {
         g_ConfigInfo.flag = DEV_FLAG_NEXT_ON;
     }
-    
+    delay_ms_nop(1000);
     APP_PRINTF("g_ConfigInfo.r_Cbias0.f:%lf, g_ConfigInfo.f_Cbias0.f:%lf, g_ConfigInfo.r_Vbias0.f:%lf, g_ConfigInfo.f_Vbias0.f:%lf\r\n",
                 g_ConfigInfo.r_Cbias0.f, g_ConfigInfo.f_Cbias0.f, g_ConfigInfo.r_Vbias0.f, g_ConfigInfo.f_Vbias0.f);
     APP_PRINTF("g_ConfigInfo.f_Vgain.f:%lf, g_ConfigInfo.f_Cgain.f:%lf, g_ConfigInfo.r_Vgain.f:%lf, g_ConfigInfo.r_Cgain.f:%lf\r\n",       

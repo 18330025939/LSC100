@@ -46,13 +46,20 @@ void socket_set_timeout(socket_handle_t *handle, uint16_t recv_timeout, uint16_t
     }
     handle->recv_timeout = recv_timeout;
     handle->send_timeout = send_timeout;
-    int optval = 1;
+	uint32_t optval = 1;
+    setsockopt(handle->sock_fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&optval, sizeof(optval));
     // 设置接收超时
     setsockopt(handle->sock_fd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout));
     // 设置发送超时
     setsockopt(handle->sock_fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout));
 
     setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
+	uint32_t keep_idle = 5;
+    setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_KEEPALIVE, (void *)&keep_idle, sizeof(keep_idle));
+    uint32_t keep_intvl = 1;
+    setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_KEEPINTVL, (void *)&keep_intvl, sizeof(keep_intvl));
+    uint32_t keep_cnt = 3;
+    setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_KEEPCNT, (void *)&keep_cnt, sizeof(keep_cnt));
 }
 
 // Socket接收数据（TCP：阻塞/超时接收；UDP：接收指定端口的广播/单播数据）

@@ -129,10 +129,12 @@ typedef struct
 } Cal_t;
 
 
-#define ALARM_STA_RAISED   0xA0
-#define ALARM_STA_CLEARED  0xB0
-#define ALARM_STA_STR_SAVE 0xC0
-#define ALARM_STA_END_SAVE 0xD0
+#define ALARM_STA_RAISED   0x10
+#define ALARM_STA_RECOVERY 0x11
+#define ALARM_STA_CLEARED  0x12
+
+#define ALARM_STA_STR_SAVE 0x20
+#define ALARM_STA_END_SAVE 0x21
 
 typedef struct {
     QueueHandle_t alarm_queue;   // 告警消息队列（存储待处理的告警）
