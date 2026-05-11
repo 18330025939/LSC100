@@ -616,13 +616,13 @@ static void ma_init(Ma_t *ma)
         return ;
     }
 
-    for (i = 1; i <= 10; i++) {
-        for (uint8_t index = 0; index < ADC_SAMPLE_CHANNEL; index++) {
-            cm2248_start_read_data();
-        }
-        cm2248_start_conv();
-        delay_us(2 * 1000);
-    }  
+    // for (i = 1; i <= 10; i++) {
+    //     for (uint8_t index = 0; index < ADC_SAMPLE_CHANNEL; index++) {
+    //         cm2248_start_read_data();
+    //     }
+    //     cm2248_start_conv();
+    //     delay_us(2 * 1000);
+    // }  
 
     for (i = 1; i <= 10; i++) {
         for (index = 0; index < ADC_SAMPLE_CHANNEL; index++) {
@@ -630,7 +630,9 @@ static void ma_init(Ma_t *ma)
             cm2248_read_both_channels(&item.raw_data[index], &raw_adc[index]);
             data[index].u += item.raw_data[index];
         }
-        cm2248_start_conv();
+        cm2248_start_conv(0);
+        delay_us_nop(1);
+        cm2248_start_conv(1);
         data[SENSOR_FRONT_CURRENT].f += ((float)item.raw_data[SENSOR_FRONT_CURRENT] - g_ConfigInfo.f_Cbias0.f);
         data[SENSOR_FRONT_VOLTAGE].f += ((float)item.raw_data[SENSOR_FRONT_VOLTAGE] - g_ConfigInfo.f_Vbias0.f);
         data[SNESOR_REAR_CURRENT].f += ((float)item.raw_data[SNESOR_REAR_CURRENT] - g_ConfigInfo.r_Cbias0.f);
@@ -744,7 +746,7 @@ void sample_task(void *pvParameters)
                 // item.raw_data[i] = cm2248_start_read_data();
                 cm2248_read_both_channels(&item.raw_data[i], &raw_adc[i]);
             }
-            cm2248_start_conv();
+            cm2248_start_conv(0);
             // taskEXIT_CRITICAL(); // 开调度器
             if (g_sample_tick % 1000 == 0) {
                 item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
@@ -753,6 +755,7 @@ void sample_task(void *pvParameters)
                 item.ts += 1;
             }
             g_sample_tick += 1;
+            cm2248_start_conv(1);
 
             
             for (i = 0; i < ADC_SAMPLE_CHANNEL; i ++) {
@@ -785,22 +788,16 @@ void sample_task(void *pvParameters)
 
             if (g_ConfigInfo.cal_flag == DEV_CAL_END && g_ConfigInfo.flag == DEV_FLAG_NEXT_ON) {
                 Adc_Clear_Alarm(raw_adc[0]);
+                #if 0
+                //APP_PRINTF("sample_task, time:%x-%x-%x %x:%x:%x, ts:%lu\r\n", item.time.ucYear, item.time.ucMonth, item.time.ucDay, item.time.ucHour, item.time.ucMin, item.time.ucScd, item.ts);
+                APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf, item.ts:%lu\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f, item.ts);
+                #endif
                 if (item.data[SENSOR_FRONT_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SENSOR_FRONT_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD &&
                     item.data[SNESOR_REAR_CURRENT].f < BUS_CURRENT_IDLE_THRESHOLD && item.data[SNESOR_REAR_VOLTAGE].f < BUS_VOLTAGE_IDLE_THRESHOLD) {
                     continue;
                 }
-                #if 0
-                APP_PRINTF("sample_task, time:%x-%x-%x %x:%x:%x, ts:%lu\r\n", item.time.ucYear, item.time.ucMonth, item.time.ucDay, item.time.ucHour, item.time.ucMin, item.time.ucScd, item.ts);
-                // APP_PRINTF("sample_task, f_c:%lf, f_v:%lf, r_c:%lf, r_v:%lf, item.ts:%lu\r\n", item.data[SENSOR_FRONT_CURRENT].f, item.data[SENSOR_FRONT_VOLTAGE].f, item.data[SNESOR_REAR_CURRENT].f, item.data[SNESOR_REAR_VOLTAGE].f, item.ts);
-                #endif
                 Adc_Cache_Write_One((AdcItemCache_t *)&g_AdcItemCache, (const AdcItem_t *)&item);
                 Adc_Check_Alarm(&item);
-                // if (g_sample_tick % 1000 == 0) {
-                //     item.ts = TimeSync_Get_Absolute_Time(g_sample_tick, &item.time);
-                //     item.temp.f = ds18b20_get_temp();
-                // } else {
-                //     item.ts += 1;
-                // }
             } else {
                 cal_bias_zero(&g_cal, &item);
                 cal_bias_full(&g_cal, &item);

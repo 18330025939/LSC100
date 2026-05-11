@@ -13,7 +13,7 @@
 #define TRUE 1
 #endif
 
-#define MAX_QUEUE_SIZE  80
+#define MAX_QUEUE_SIZE  62
 #define MAX_QUEUE_DATA_SIZE  100
 typedef struct
 {

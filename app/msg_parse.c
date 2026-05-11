@@ -833,7 +833,7 @@ void msg_send_task(void *pvParameters)
         ret = deQueue(que, msg);
         if (ret) {
             uint8_t retry = 0;
-            while (xQueueSend(handle->queue, msg, pdMS_TO_TICKS(20)) != pdPASS && retry < 3) {
+            while (xQueueSend(handle->queue, msg, pdMS_TO_TICKS(5)) != pdPASS && retry < 3) {
                 // APP_PRINTF("msg_send_task, xQueueSend retry %d\r\n", retry+1);
                 retry++;
             }
@@ -858,7 +858,7 @@ void msg_send_task(void *pvParameters)
 
 void msg_parse_start(void)
 {
-    g_TcpServerHandle.queue = xQueueCreate(20, 100);
+    g_TcpServerHandle.queue = xQueueCreate(62, 100);
     initCirQueue(&g_CirQue); 
 
     tcp_server_start(&g_TcpServerHandle);

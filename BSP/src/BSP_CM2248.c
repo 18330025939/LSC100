@@ -53,19 +53,21 @@ void cm2248_init(void){
     CM2248_CONVST_B_L;
     cm2248_reset();
     CM2248_delay_us(1);
-    cm2248_start_conv();
+    cm2248_start_conv(0);
+    CM2248_delay_us(1);
+    cm2248_start_conv(1);
 }
 
-void cm2248_start_conv(void)
+void cm2248_start_conv(uint8_t sta)
 {
-    CM2248_CONVST_A_L;
-    CM2248_CONVST_B_L;
-    // CM2248_delay_us(10);  // 1ms = 1000us
-    __NOP();
-    __NOP();
-    __NOP();
-    CM2248_CONVST_A_H;
-    CM2248_CONVST_B_H;
+    if (sta == 0) {
+        CM2248_CONVST_A_L;
+        CM2248_CONVST_B_L;
+    }
+    else {
+        CM2248_CONVST_A_H;
+        CM2248_CONVST_B_H;
+    }
 }
 
 uint16_t cm2248_start_read_data(void)

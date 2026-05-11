@@ -78,7 +78,7 @@
 #define CM2248_ADC_FRSTDATA gpio_input_bit_get(GPIOE,GPIO_PIN_11)
 
 void cm2248_init(void);
-void cm2248_start_conv(void);
+void cm2248_start_conv(uint8_t sta);
 uint16_t cm2248_start_read_data(void);
 void cm2248_reset(void);
 void cm2248_read_both_channels(uint16_t *data_a, uint16_t *data_b);

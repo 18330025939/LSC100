@@ -16,7 +16,7 @@ int8_t socket_init(socket_handle_t *handle, proto_type_e proto, uint16_t local_p
     handle->local_addr.sin_family = AF_INET;
     handle->local_addr.sin_addr.s_addr = htonl(INADDR_ANY);  // 绑定所有本地网卡
     handle->local_addr.sin_port = htons(local_port);  // 本地端口（网络字节序）
-    handle->recv_timeout = 0;  // 默认接收超时1s
+    handle->recv_timeout = 1000;  // 默认接收超时1s
     handle->send_timeout = 1000;  // 默认发送超时1s
 
     // 2. 创建Socket（SOCK_STREAM=TCP，SOCK_DGRAM=UDP，IPPROTO_IP=通用IP协议）
@@ -54,9 +54,9 @@ void socket_set_timeout(socket_handle_t *handle, uint16_t recv_timeout, uint16_t
     setsockopt(handle->sock_fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout));
 
     setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_NODELAY, (void *)&optval, sizeof(optval));
-	uint32_t keep_idle = 5;
+	uint32_t keep_idle = 5000;
     setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_KEEPALIVE, (void *)&keep_idle, sizeof(keep_idle));
-    uint32_t keep_intvl = 1;
+    uint32_t keep_intvl = 3;
     setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_KEEPINTVL, (void *)&keep_intvl, sizeof(keep_intvl));
     uint32_t keep_cnt = 3;
     setsockopt(handle->sock_fd, IPPROTO_TCP, TCP_KEEPCNT, (void *)&keep_cnt, sizeof(keep_cnt));

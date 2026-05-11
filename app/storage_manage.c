@@ -37,7 +37,7 @@ TaskHandle_t StorageTask_Handle;
 TaskHandle_t AlarmTask_Handle; 
 static uint8_t g_adc_items[(ADC_ITEM_NUM_PER_SECOND + 100) * ADC_ITEM_SIZE] = {0};
 static uint8_t g_adc_data[ADC_ITEM_NUM_PER_SECOND * ADC_ITEM_SIZE] = {0};
-static AdcIndexItem_t g_item_tables[ADC_INDEX_NUM_PRE_BLOCK * 5] = {0};
+static AdcIndexItem_t g_item_tables[ADC_INDEX_NUM_PRE_BLOCK * 10] = {0};
 
 int8_t Get_AdcData_Time(AdcObject_t *adc, SystemTime_t *str_time, SystemTime_t *end_time)
 {
@@ -152,8 +152,8 @@ int8_t Storage_Read_AdcData(AdcObject_t *adc, uint32_t timestamp, uint16_t block
         }
     } else {
         for (num = 0; num < adc->block_num; ) {
-            if ((adc->block_num - num) > 5) {
-                step = 5;
+            if ((adc->block_num - num) > 10) {
+                step = 10;
             } else {
                 step = adc->block_num - num;
             }
@@ -471,8 +471,7 @@ void storage_task(void *pvParameters)
     AdcItem_t *pItem = NULL;
     uint16_t read_len = 0;
     uint32_t index = 0;
-    uint16_t i = 0;
-    // TickType_t xLastWakeTime = xTaskGetTickCount(); 
+    uint16_t i = 0; 
 
     for (;;)
     {
@@ -501,11 +500,9 @@ void storage_task(void *pvParameters)
                         }
                     }
                 }
-                // vTaskDelay(pdMS_TO_TICKS(1));
             }
         }
         vTaskDelay(pdMS_TO_TICKS(30));
-        // vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(100));
     }
 }
 
@@ -594,7 +591,7 @@ void storage_manage_start(void)
                 (void*          )NULL,                      // 任务参数
                 (UBaseType_t    )ALARM_TASK_PRIO,           // 任务优先级（低于定时器中断优先级）
                 (TaskHandle_t*  )&AlarmTask_Handle);        // 任务句柄
-     if (type != pdPASS) {
+    if (type != pdPASS) {
         APP_PRINTF("alarm_task failed\r\n");
     }
 }
